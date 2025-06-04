@@ -672,11 +672,11 @@ export class Game extends GameEngine {
       ctx.fillText(this.paymentState === 'processing' ? 'Processing payment...' : 'Verifying transaction...', this.width / 2, this.height / 2);
       
       // Loading spinner animation
-      const time = Date.now() * 0.001;
+      const time = Date.now() * 0.005;
       ctx.strokeStyle = this.paymentState === 'processing' ? '#8b5cf6' : '#4a7c59';
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(this.width / 2, this.height / 2 + 50, 20, time * 2, time * 2 + Math.PI * 1.5);
+      ctx.arc(this.width / 2, this.height / 2 + 50, 20, time, time + Math.PI * 1.5);
       ctx.stroke();
     } else if (this.paymentState === 'success') {
       // Success state for main menu
@@ -1111,11 +1111,11 @@ export class Game extends GameEngine {
       ctx.fillText(this.paymentState === 'processing' ? 'Processing payment...' : 'Verifying transaction...', this.width / 2, 320);
       
       // Loading spinner animation
-      const time = Date.now() * 0.001;
+      const time = Date.now() * 0.005;
       ctx.strokeStyle = this.paymentState === 'processing' ? '#f59e0b' : '#4a7c59';
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(this.width / 2, 380, 20, time * 2, time * 2 + Math.PI * 1.5);
+      ctx.arc(this.width / 2, 380, 20, time, time + Math.PI * 1.5);
       ctx.stroke();
     } else if (this.paymentState === 'error') {
       // Show error state for continue payment
@@ -1511,11 +1511,11 @@ export class Game extends GameEngine {
       ctx.fillText('Processing payment...', this.width / 2, modalY + 200);
       
       // Loading spinner animation
-      const time = Date.now() * 0.001;
+      const time = Date.now() * 0.005;
       ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(this.width / 2, modalY + 250, 20, time * 2, time * 2 + Math.PI * 1.5);
+      ctx.arc(this.width / 2, modalY + 250, 20, time, time + Math.PI * 1.5);
       ctx.stroke();
     } else if (this.paymentState === 'verifying') {
       // Verifying state
@@ -1524,11 +1524,11 @@ export class Game extends GameEngine {
       ctx.fillText('Verifying transaction...', this.width / 2, modalY + 200);
       
       // Loading spinner animation
-      const time = Date.now() * 0.001;
+      const time = Date.now() * 0.005;
       ctx.strokeStyle = '#4a7c59';
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(this.width / 2, modalY + 250, 20, time * 2, time * 2 + Math.PI * 1.5);
+      ctx.arc(this.width / 2, modalY + 250, 20, time, time + Math.PI * 1.5);
       ctx.stroke();
     } else if (this.paymentState === 'error') {
       // Error state
@@ -1630,11 +1630,11 @@ export class Game extends GameEngine {
       ctx.fillText('Processing payment...', this.width / 2, modalY + 250);
       
       // Loading spinner animation
-      const time = Date.now() * 0.001;
+      const time = Date.now() * 0.005;
       ctx.strokeStyle = '#8b5cf6';
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(this.width / 2, modalY + 300, 20, time * 2, time * 2 + Math.PI * 1.5);
+      ctx.arc(this.width / 2, modalY + 300, 20, time, time + Math.PI * 1.5);
       ctx.stroke();
     } else if (this.paymentState === 'verifying') {
       // Verifying state
@@ -1643,11 +1643,11 @@ export class Game extends GameEngine {
       ctx.fillText('Verifying transaction...', this.width / 2, modalY + 250);
       
       // Loading spinner animation
-      const time = Date.now() * 0.001;
+      const time = Date.now() * 0.005;
       ctx.strokeStyle = '#4a7c59';
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(this.width / 2, modalY + 300, 20, time * 2, time * 2 + Math.PI * 1.5);
+      ctx.arc(this.width / 2, modalY + 300, 20, time, time + Math.PI * 1.5);
       ctx.stroke();
     } else if (this.paymentState === 'error') {
       // Error state
@@ -1928,6 +1928,23 @@ export class Game extends GameEngine {
     this.gameState = 'playing';
     this.paymentModal = null;
     this.paymentState = null;
+    
+    // Clear existing platforms and game objects (except essential ones)
+    for (const platform of this.platforms) {
+      this.removeGameObject(platform);
+    }
+    this.platforms = [];
+    
+    // Clear coins and power-ups too
+    for (const coin of this.coins) {
+      this.removeGameObject(coin);
+    }
+    this.coins = [];
+    
+    for (const powerUp of this.powerUps) {
+      this.removeGameObject(powerUp);
+    }
+    this.powerUps = [];
     
     // Place player on a safe platform
     const safeY = this.camera.y + this.height / 2;
