@@ -389,7 +389,12 @@ export class Game extends GameEngine {
       // Render game objects in view
       for (const obj of this.gameObjects) {
         if (obj.render && this.camera.isInView(obj)) {
-          obj.render(ctx);
+          // Pass shield count to player for glow effect
+          if (obj === this.player) {
+            obj.render(ctx, this.powerUpInventory.shield);
+          } else {
+            obj.render(ctx);
+          }
         }
       }
       
@@ -1089,6 +1094,23 @@ export class Game extends GameEngine {
       ctx.beginPath();
       ctx.arc(this.width / 2, 380, 20, time * 2, time * 2 + Math.PI * 1.5);
       ctx.stroke();
+    } else if (this.paymentState === 'error') {
+      // Show error state for continue payment
+      ctx.fillStyle = '#dc2626';
+      ctx.font = '600 18px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Payment Failed', this.width / 2, 280);
+      
+      ctx.fillStyle = '#666';
+      ctx.font = '16px Arial';
+      const errorMessage = this.paymentError || 'Transaction failed. Please try again.';
+      ctx.fillText(errorMessage, this.width / 2, 310);
+      
+      // Try again button
+      this.drawButton(ctx, this.width / 2, 350, 200, 50, 'TRY AGAIN', '#f59e0b');
+      
+      // Menu button
+      this.drawButton(ctx, this.width / 2, 410, 200, 50, 'BACK TO MENU', '#6b7280');
     } else {
       // Continue button (payment)
       this.drawButton(ctx, this.width / 2, 290, 240, 60, '💳 CONTINUE (0.001 HYPE)', '#f59e0b');
@@ -1466,6 +1488,41 @@ export class Game extends GameEngine {
       ctx.beginPath();
       ctx.arc(this.width / 2, modalY + 250, 20, time * 2, time * 2 + Math.PI * 1.5);
       ctx.stroke();
+    } else if (this.paymentState === 'error') {
+      // Error state
+      ctx.fillStyle = '#dc2626';
+      ctx.font = '600 18px Arial';
+      ctx.fillText('Payment Failed', this.width / 2, modalY + 180);
+      
+      ctx.fillStyle = '#666';
+      ctx.font = '16px Arial';
+      const errorMessage = this.paymentError || 'Transaction failed. Please try again.';
+      
+      // Word wrap for long error messages
+      const words = errorMessage.split(' ');
+      let line = '';
+      let y = modalY + 220;
+      const maxWidth = modalWidth - 60;
+      
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        const testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+          ctx.fillText(line, this.width / 2, y);
+          line = words[n] + ' ';
+          y += 25;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, this.width / 2, y);
+      
+      // Try again button
+      this.drawButton(ctx, this.width / 2, modalY + 320, 200, 50, 'TRY AGAIN', '#f59e0b');
+      
+      // Cancel button
+      this.drawButton(ctx, this.width / 2, modalY + 380, 200, 50, 'CANCEL', '#6b7280');
     } else {
       // Payment info
       ctx.fillStyle = '#666';
@@ -1550,6 +1607,41 @@ export class Game extends GameEngine {
       ctx.beginPath();
       ctx.arc(this.width / 2, modalY + 300, 20, time * 2, time * 2 + Math.PI * 1.5);
       ctx.stroke();
+    } else if (this.paymentState === 'error') {
+      // Error state
+      ctx.fillStyle = '#dc2626';
+      ctx.font = '600 18px Arial';
+      ctx.fillText('Purchase Failed', this.width / 2, modalY + 220);
+      
+      ctx.fillStyle = '#666';
+      ctx.font = '16px Arial';
+      const errorMessage = this.paymentError || 'Transaction failed. Please try again.';
+      
+      // Word wrap for long error messages
+      const words = errorMessage.split(' ');
+      let line = '';
+      let y = modalY + 260;
+      const maxWidth = modalWidth - 60;
+      
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        const testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+          ctx.fillText(line, this.width / 2, y);
+          line = words[n] + ' ';
+          y += 25;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, this.width / 2, y);
+      
+      // Try again button
+      this.drawButton(ctx, this.width / 2, modalY + 350, 200, 50, 'TRY AGAIN', '#8b5cf6');
+      
+      // Close button
+      this.drawButton(ctx, this.width / 2, modalY + 410, 160, 40, 'CLOSE', '#6b7280');
     } else {
       // Power-up options
       const powerUpInfo = [
@@ -1560,33 +1652,33 @@ export class Game extends GameEngine {
         { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: '0.0015 HYPE', color: '#f59e0b' }
       ];
       
-      let y = modalY + 90;
+      let rowY = modalY + 90;
       
       for (const info of powerUpInfo) {
         // Power-up row
         ctx.fillStyle = '#f3f4f6';
         ctx.beginPath();
-        ctx.roundRect(modalX + 20, y, modalWidth - 40, 60, 8);
+        ctx.roundRect(modalX + 20, rowY, modalWidth - 40, 60, 8);
         ctx.fill();
         
         // Icon
         ctx.font = '28px Arial';
         ctx.textAlign = 'left';
-        ctx.fillText(info.icon, modalX + 40, y + 38);
+        ctx.fillText(info.icon, modalX + 40, rowY + 38);
         
         // Name
         ctx.fillStyle = '#333';
         ctx.font = '600 18px Rubik, Arial';
-        ctx.fillText(info.name, modalX + 80, y + 28);
+        ctx.fillText(info.name, modalX + 80, rowY + 28);
         
         // Price
         ctx.fillStyle = info.color;
         ctx.font = '700 16px Rubik, Arial';
-        ctx.fillText(info.price, modalX + 80, y + 48);
+        ctx.fillText(info.price, modalX + 80, rowY + 48);
         
         // Buy button
         const btnX = modalX + modalWidth - 80;
-        const btnY = y + 30;
+        const btnY = rowY + 30;
         
         ctx.fillStyle = info.color;
         ctx.beginPath();
@@ -1598,7 +1690,7 @@ export class Game extends GameEngine {
         ctx.textAlign = 'center';
         ctx.fillText('BUY', btnX, btnY + 3);
         
-        y += 70;
+        rowY += 70;
       }
       
       // Close button
@@ -1629,17 +1721,17 @@ export class Game extends GameEngine {
           { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: '0.0015 ETH', color: '#f59e0b' }
         ];
         
-        let y = modalY + 90;
+        let rowY = modalY + 90;
         for (const info of powerUpInfo) {
           const btnX = modalX + modalWidth - 80;
-          const btnY = y + 30;
+          const btnY = rowY + 30;
           
           if (x >= btnX - 25 && x <= btnX + 25 && y >= btnY - 15 && y <= btnY + 15) {
             this.processPowerUpPurchase(info.type);
             return;
           }
           
-          y += 70;
+          rowY += 70;
         }
         
         // Close button
@@ -1648,6 +1740,42 @@ export class Game extends GameEngine {
           eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
           return;
         }
+      } else if (this.paymentState === 'error') {
+        // Try again button
+        if (this.isPointInButton(x, y, this.width / 2, modalY + 350, 200, 50)) {
+          this.paymentState = null;
+          this.paymentError = null;
+          eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
+          return;
+        }
+        
+        // Close button
+        if (this.isPointInButton(x, y, this.width / 2, modalY + 410, 160, 40)) {
+          this.paymentModal = null;
+          this.paymentState = null;
+          this.paymentError = null;
+          eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
+          return;
+        }
+      }
+    } else if (this.paymentState === 'error') {
+      // Handle error state buttons
+      
+      // Try again button
+      if (this.isPointInButton(x, y, this.width / 2, 350, 200, 50)) {
+        this.paymentState = null;
+        this.paymentError = null;
+        this.processContinuePayment();
+        return;
+      }
+      
+      // Back to menu button
+      if (this.isPointInButton(x, y, this.width / 2, 410, 200, 50)) {
+        this.paymentState = null;
+        this.paymentError = null;
+        this.showMenu();
+        eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
+        return;
       }
     } else {
       // Continue button - direct payment
@@ -1702,9 +1830,18 @@ export class Game extends GameEngine {
       
     } catch (error) {
       console.error('Payment failed:', error);
-      this.paymentState = null;
-      this.paymentModal = null;
+      this.paymentState = 'error';
+      this.paymentError = error.message || 'Payment failed. Please try again.';
       eventBus.emit(Events.HAPTIC_TRIGGER, 'error');
+      
+      // Auto-hide error after 3 seconds
+      setTimeout(() => {
+        if (this.paymentState === 'error') {
+          this.paymentState = null;
+          this.paymentModal = null;
+          this.paymentError = null;
+        }
+      }, 3000);
     }
   }
   
@@ -1773,8 +1910,18 @@ export class Game extends GameEngine {
       
     } catch (error) {
       console.error('Power-up purchase failed:', error);
-      this.paymentState = null;
+      this.paymentState = 'error';
+      this.paymentError = error.message || 'Purchase failed. Please try again.';
       eventBus.emit(Events.HAPTIC_TRIGGER, 'error');
+      
+      // Auto-hide error after 3 seconds
+      setTimeout(() => {
+        if (this.paymentState === 'error') {
+          this.paymentState = null;
+          this.paymentModal = null;
+          this.paymentError = null;
+        }
+      }, 3000);
     }
   }
   

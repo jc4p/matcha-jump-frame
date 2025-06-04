@@ -139,11 +139,11 @@ export class Player {
     this.x += this.velocityX * deltaTime;
     this.y += this.velocityY * deltaTime;
     
-    // Wrap around screen edges
-    if (this.x < -this.width / 2) {
-      this.x = window.innerWidth - this.width / 2;
+    // Keep player within screen bounds
+    if (this.x < this.width / 2) {
+      this.x = this.width / 2;
     } else if (this.x > window.innerWidth - this.width / 2) {
-      this.x = -this.width / 2;
+      this.x = window.innerWidth - this.width / 2;
     }
     
     if (this.velocityY > 0) {
@@ -176,8 +176,37 @@ export class Player {
     }
   }
   
-  render(ctx) {
+  render(ctx, shieldCount = 0) {
     ctx.save();
+    
+    // Shield glow effect
+    if (shieldCount > 0) {
+      // Animated pulsing glow
+      const time = Date.now() * 0.003;
+      const glowIntensity = 0.5 + 0.3 * Math.sin(time);
+      const glowSize = 8 + 4 * Math.sin(time * 1.2);
+      
+      // Create radial gradient for glow
+      const gradient = ctx.createRadialGradient(
+        this.x, this.y, this.width / 4,
+        this.x, this.y, this.width / 2 + glowSize
+      );
+      gradient.addColorStop(0, `rgba(59, 130, 246, ${glowIntensity * 0.8})`);
+      gradient.addColorStop(0.7, `rgba(59, 130, 246, ${glowIntensity * 0.4})`);
+      gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+      
+      // Draw glow circle
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.width / 2 + glowSize, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw shield icon indicator
+      ctx.fillStyle = `rgba(59, 130, 246, ${glowIntensity})`;
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('🛡️', this.x, this.y - this.height / 2 - 10);
+    }
     
     // Apply transformations
     ctx.translate(this.x, this.y);
