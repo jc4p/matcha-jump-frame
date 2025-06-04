@@ -51,5 +51,4 @@ Authorization: Bearer <jwt-token>
 Update the values in `wrangler.toml` as needed:
 - `BASE_RPC_URL` - Base blockchain RPC URL
 - `PAYMENT_ADDRESS` - Address to receive payments
-- `HYPE_TOKEN_ADDRESS` - HYPE token contract address
 - `QUICK_AUTH_DOMAIN` - Your app domain for Farcaster auth
