@@ -1,14 +1,17 @@
 # Matcha Jump - Development Plan
 
-## What We've Built So Far
+## 🎮 Current State (December 2024)
 
-### Core Game Architecture
+### ✅ What We've Built So Far
+
+#### Core Game Architecture
 - **Event-driven system** using `mitt` for decoupled communication between game components
 - **Game Engine** (`GameEngine.js`) - Handles game loop with deltaTime capping, rendering pipeline
 - **Camera System** (`Camera.js`) - Implements upward-scrolling viewport that follows the player
+- **Asset Loader** (`AssetLoader.js`) - Preloads all game images with progress tracking
 - **Farcaster Frame Integration** - Set up with proper meta tags, SDK initialization, and haptic feedback
 
-### Game Entities
+#### Game Entities
 1. **Player** (`Player.js`)
    - Physics-based movement with gravity (800 units/s²) and jump mechanics
    - Velocity capped at 600 units/s for fall speed
@@ -32,195 +35,230 @@
    - Spring platforms animate when used (scale bounce effect)
    - Spawn rates: 10% moving, 5% breakable, 3% spring
 
-### Game States
-- **Menu** - Shows game title and tap to start
-- **Playing** - Active gameplay with score tracking and minimal UI
-- **Game Over** - Shows final score and high score
+3. **Collectibles** (`Coin.js`)
+   - Animated coins with rotation and floating motion
+   - Magnetic attraction when player is near
+   - Collection particles on pickup
+   - Score rewards with combo multipliers
 
-### Mobile Optimizations
+4. **Power-ups** (`PowerUp.js`, `PowerUpManager.js`)
+   - **Five types implemented:**
+     - **Rocket** - Continuous upward boost (3 seconds)
+     - **Shield** - One-time fall protection
+     - **Magnet** - Attracts coins from greater distance (5 seconds)
+     - **Score Boost** - 2x score multiplier (10 seconds)
+     - **Slow Time** - Time dilation effect (visual only, mechanics not implemented)
+   - Visual indicators for active power-ups
+   - Duration timers and proper cleanup
+
+#### Game Systems
+
+1. **Combo System** (`ComboManager.js`)
+   - Tracks consecutive perfect landings on platforms
+   - Combo multipliers affect scoring (1x, 1.5x, 2x, 3x)
+   - Milestone bonuses at 5, 10, 20+ combos
+   - Visual feedback with particles for milestones
+   - Combo breaks on missed platforms
+
+2. **Audio System** (`AudioManager.js`, `GameSynth.js`)
+   - **Sophisticated synthesizer-based sound effects using Tone.js:**
+     - Jump sounds with pitch variation based on velocity
+     - Landing thuds with low-frequency impact
+     - Coin collection jingles
+     - Spring bounce with characteristic "boing"
+     - Platform break sounds
+     - Power-up collection fanfares
+     - Game over sequence
+     - Ambient background chords
+   - Web Audio API for better mobile performance
+   - Automatic audio context resume on user interaction
+
+3. **Particle System** (`ParticleManager.js`, `Particle.js`)
+   - Jump dust particles
+   - Landing impact particles
+   - Platform break particles (red debris)
+   - Coin collection sparkles (yellow)
+   - Rocket boost trails (orange/red)
+   - Shield break effects (blue)
+   - Combo milestone celebrations (rainbow colors)
+   - Performance-optimized with automatic cleanup
+
+#### Game States & UI
+- **Menu** - Shows game title and tap to start
+- **Playing** - Active gameplay with score tracking
+- **Game Over** - Shows final score and high score
+- **Score persistence** using localStorage
+- **Mobile-optimized UI** with fading touch instructions
+
+#### Mobile & Frame Features
 - Touch controls with subtle text hint that fades after 3 seconds
 - Prevented zoom and scroll on mobile devices
 - Haptic feedback integration:
   - Light haptic on normal platform landing
   - Heavy haptic on spring platform and game over
 - Responsive canvas sizing with proper DPI scaling
+- Frame V2 ready state signaling
 
-### Visual Polish Implemented
-- **Disney Animation Principles:**
-  - Squash and stretch on jump/land
-  - Follow-through with landing recovery
-  - Secondary action with rotation
-  - Anticipation system (built but not used in automatic jumping)
-  - Exaggeration in animation values
-- Shadow effect when jumping upward
-- Spring platform bounce animation
-- Clean, minimal UI with fading instructions
+## 📋 What Still Needs to Be Done
 
-## What Needs to Be Done
+### 1. Visual Enhancements 🎨
+- [ ] **Background System**
+  - Parallax layers with clouds
+  - Different themes at different heights (Sky → Clouds → Space)
+  - Enhanced gradient backgrounds
+  - Atmospheric effects
 
-### 1. Power-up System
-- [ ] Design power-up architecture using event system
-- [ ] Implement power-ups:
-  - **Rocket/Jetpack** - Shoot up rapidly for X seconds
-  - **Shield/Bubble** - One free fall protection
-  - **Magnet** - Auto-collect nearby items
-  - **Double Jump** - Jump again in mid-air
-  - **Slow Motion** - Temporary time dilation
-  - **Size Change** - Become tiny or giant temporarily
-- [ ] Power-up spawn logic and rarity system
-- [ ] Visual indicators for active power-ups
-- [ ] Power-up duration timers
+- [ ] **Screen Effects**
+  - Screen shake on heavy impacts
+  - Smooth transitions between game states
+  - Visual feedback for height milestones
 
-### 2. Scoring & Persistence
-- [ ] Implement score multipliers
-- [ ] Add combo system for consecutive perfect landings
-- [ ] Store high scores in localStorage
-- [ ] Add coin/collectible system for points
-- [ ] Farcaster Frame integration:
-  - Submit scores to leaderboard
-  - Show friend's high scores
-  - Achievement system
-
-### 3. Audio System
-- [ ] Create audio manager that listens to events
-- [ ] Sound effects:
-  - Jump sound (different for each platform type)
-  - Landing sound with pitch variation
-  - Spring bounce sound
-  - Power-up collection
-  - Background music (adaptive to height/speed)
-  - Game over sound
-  - Menu music
-- [ ] Use Web Audio API for better mobile performance
-- [ ] Volume controls
-
-### 4. Enhanced Visual Effects
-- [ ] Background parallax layers
-- [ ] Clouds that move at different speeds
-- [ ] Particle effects:
-  - Jump dust clouds
-  - Platform break particles
-  - Power-up sparkles
-  - Trail effects for fast movement
-- [ ] Screen shake on heavy impacts
-- [ ] Smooth transitions between game states
-- [ ] Better background gradient based on height
-
-### 5. Game Features
-- [ ] Difficulty progression:
+### 2. Game Features 🎯
+- [ ] **Difficulty Progression**
   - Platforms spawn further apart as you go higher
   - More moving/breakable platforms at higher scores
   - Wind effects at extreme heights
-- [ ] Enemy/obstacle system:
+  - Speed increases with altitude
+
+- [ ] **Enemy/Obstacle System**
   - Birds that knock you sideways
   - Black holes that pull you
   - Spikes on some platforms
-- [ ] Different themes/worlds as you progress:
-  - Sky theme (0-1000)
-  - Cloud theme (1000-5000)
-  - Space theme (5000+)
-- [ ] Daily challenges with specific goals
-- [ ] Tutorial mode for first-time players
+  - Moving hazards to avoid
 
-### 6. Platform Improvements
-- [ ] More platform types:
+- [ ] **Additional Platform Types**
   - Disappearing platforms (fade after X seconds)
   - Conveyor platforms (move player left/right)
   - Sticky platforms (slow jump charge)
   - Teleport platforms (warp to other side)
-- [ ] Platform patterns/formations
-- [ ] Boss platforms at milestones
 
-### 7. Farcaster Frame Features
-- [ ] Quick auth integration for user profiles
-- [ ] Share score as a cast with game thumbnail
-- [ ] Multiplayer ghost mode (see friend's best run)
-- [ ] NFT rewards for achievements
-- [ ] Frame-specific power-ups that use blockchain
-- [ ] Leaderboard with weekly resets
-- [ ] Social features (challenge friends)
+### 3. Power-up Improvements 💪
+- [ ] **Additional Power-ups**
+  - Double Jump - Jump again in mid-air
+  - Size Change - Become tiny or giant temporarily
 
-## Technical Improvements Needed
+- [ ] **Slow Time Mechanics**
+  - Actually implement time dilation for gameplay
+  - Slow down platform movement and enemy speeds
 
-1. **Performance**
-   - [ ] Object pooling for platforms and particles
-   - [ ] Optimize rendering (frustum culling)
-   - [ ] Reduce garbage collection with object reuse
-   - [ ] Batch draw calls
+### 4. Farcaster Social Features 🌐
+- [ ] **Leaderboard Integration**
+  - Submit scores to global leaderboard
+  - Show friend's high scores
+  - Weekly/daily leaderboards
 
-2. **Code Organization**
-   - [ ] Create managers:
-     - AudioManager
-     - PowerUpManager
-     - ParticleManager
-     - ScoreManager
-   - [ ] Implement proper state machine for game states
-   - [ ] Add TypeScript for better type safety
-   - [ ] Create constants file for game tuning
+- [ ] **Social Features**
+  - Share score as a cast with game thumbnail
+  - Challenge friends directly
+  - Multiplayer ghost mode (see friend's best run)
 
-3. **Testing & Polish**
-   - [ ] Add collision detection improvements
-   - [ ] Test on various mobile devices and frames
-   - [ ] Performance profiling
-   - [ ] Accessibility features
-   - [ ] Save system for progress
+- [ ] **Frame-Specific Features**
+  - Quick Auth implementation for user profiles
+  - NFT rewards for achievements
+  - Frame-specific power-ups
+  - Achievement badges
 
-## Event Bus Events to Add
-```javascript
-// Power-ups
-POWERUP_SPAWN: 'powerup:spawn'
-POWERUP_ACTIVATE: 'powerup:activate'
-POWERUP_EXPIRE: 'powerup:expire'
+### 5. Meta Features 🏆
+- [ ] **Achievement System**
+  - Height milestones
+  - Combo achievements
+  - Power-up mastery
+  - Collectible challenges
 
-// Combos & Scoring
-COMBO_START: 'combo:start'
-COMBO_INCREMENT: 'combo:increment'
-COMBO_BREAK: 'combo:break'
-SCORE_MILESTONE: 'score:milestone'
+- [ ] **Daily Challenges**
+  - Specific goals each day
+  - Bonus rewards
+  - Streak tracking
 
-// Effects
-PARTICLE_SPAWN: 'particle:spawn'
-SCREEN_SHAKE: 'effect:screenShake'
-TIME_SLOW: 'effect:timeSlow'
+- [ ] **Tutorial Mode**
+  - Interactive tutorial for first-time players
+  - Power-up explanations
+  - Advanced technique demonstrations
 
-// UI
-UI_SHOW_MESSAGE: 'ui:showMessage'
-UI_UPDATE_MULTIPLIER: 'ui:updateMultiplier'
+### 6. Performance & Polish 🚀
+- [ ] **Optimization**
+  - Object pooling for platforms and particles
+  - Frustum culling for off-screen objects
+  - Batch rendering optimizations
+  - Memory management improvements
 
-// Achievements
-ACHIEVEMENT_UNLOCK: 'achievement:unlock'
-ACHIEVEMENT_PROGRESS: 'achievement:progress'
+- [ ] **Code Quality**
+  - TypeScript migration
+  - Constants file for game tuning
+  - Comprehensive error handling
+  - Unit tests for critical systems
 
-// Social
-LEADERBOARD_UPDATE: 'social:leaderboardUpdate'
-GHOST_DATA: 'social:ghostData'
-```
+## 🎯 Priority Roadmap
 
-## Next Steps Priority
-1. **Immediate** (This Week):
-   - [ ] Add local high score storage
-   - [ ] Implement basic particle effects for jumps
-   - [ ] Add coin collectibles for extra points
-   - [ ] Create AudioManager with basic sounds
+### Phase 1: Polish Current Features (1 week)
+- [x] ~~Add local high score storage~~ ✅
+- [x] ~~Implement particle effects~~ ✅
+- [x] ~~Add coin collectibles~~ ✅
+- [x] ~~Create audio system~~ ✅
+- [x] ~~Implement power-ups~~ ✅
+- [x] ~~Add combo system~~ ✅
+- [ ] Fix slow time power-up mechanics
+- [ ] Add difficulty progression
 
-2. **Short Term** (Next 2 Weeks):
-   - [ ] Implement 2-3 power-ups (rocket, shield, magnet)
-   - [ ] Add combo system
-   - [ ] Background parallax layers
-   - [ ] Farcaster leaderboard integration
+### Phase 2: Visual Enhancement (2 weeks)
+- [ ] Implement parallax backgrounds
+- [ ] Add themed zones (sky, clouds, space)
+- [ ] Create screen shake effects
+- [ ] Polish UI transitions
 
-3. **Medium Term** (Month):
-   - [ ] Full audio implementation
-   - [ ] All power-ups complete
-   - [ ] Enemy/obstacle system
-   - [ ] Achievement system
-   - [ ] Social features
+### Phase 3: Social Integration (2 weeks)
+- [ ] Farcaster leaderboard integration
+- [ ] Score sharing functionality
+- [ ] Friend challenges
+- [ ] Achievement system
 
-4. **Long Term**:
-   - [ ] Multiple themes/worlds
-   - [ ] Daily challenges
-   - [ ] Multiplayer ghost mode
-   - [ ] NFT integration
+### Phase 4: Advanced Features (1 month)
+- [ ] Enemy/obstacle system
+- [ ] Additional platform types
+- [ ] Daily challenges
+- [ ] Ghost mode multiplayer
+- [ ] NFT rewards
 
-## Current Game Feel
-The game now has excellent "juice" with Disney-quality animations. The player feels responsive and alive with squash/stretch, rotation, and bounce effects. Platform variety keeps gameplay interesting, and the spring platforms provide exciting moments. Mobile controls are intuitive with clean visual design.
+## 📊 Current Progress Summary
+
+**Core Gameplay: 90% Complete** ✅
+- All basic mechanics implemented
+- Four platform types working
+- Player controls polished
+- Basic game loop complete
+
+**Collectibles & Rewards: 85% Complete** ✅
+- Coins fully implemented
+- Power-ups working (except time mechanics)
+- Combo system active
+- Score persistence done
+
+**Audio/Visual: 70% Complete** 🔄
+- Full audio system implemented
+- Particle effects working
+- Needs: backgrounds, themes, screen effects
+
+**Social Features: 10% Complete** 📱
+- Frame integration started
+- Needs: leaderboards, sharing, multiplayer
+
+**Meta Features: 5% Complete** 🎮
+- Basic scoring done
+- Needs: achievements, challenges, progression
+
+## 🎮 Game Feel Assessment
+
+The game has excellent "juice" with Disney-quality animations. Player movement feels responsive and alive with squash/stretch effects. The audio system adds satisfying feedback for every action. The combo system rewards skilled play, while power-ups add variety and excitement. Mobile controls are intuitive with haptic feedback enhancing the experience.
+
+**What's Working Well:**
+- Tight, responsive controls
+- Satisfying audio-visual feedback
+- Good variety in platform types
+- Engaging combo system
+- Smooth performance
+
+**Areas for Improvement:**
+- Visual variety (backgrounds, themes)
+- Long-term progression hooks
+- Social competition elements
+- Difficulty curve refinement

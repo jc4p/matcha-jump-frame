@@ -4,6 +4,8 @@ import { eventBus, Events } from '../eventBus.js';
 export class ParticleManager {
   constructor() {
     this.particles = [];
+    this.y = 0; // For camera view check
+    this.height = 0; // For camera view check
     this.bindEvents();
   }
   
@@ -18,6 +20,20 @@ export class ParticleManager {
     
     eventBus.on(Events.PLATFORM_DESTROY, (platform) => {
       this.createBreakParticles(platform.x, platform.y);
+    });
+    
+    eventBus.on(Events.COIN_COLLECTED, (coin) => {
+      this.createCoinParticles(coin.x, coin.y);
+    });
+    
+    eventBus.on(Events.POWERUP_COLLECTED, (powerUp) => {
+      this.createCoinParticles(powerUp.x, powerUp.y);
+    });
+    
+    eventBus.on(Events.COMBO_MILESTONE, (data) => {
+      if (data.player) {
+        this.createComboParticles(data.player.x, data.player.y);
+      }
     });
   }
   

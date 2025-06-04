@@ -97,8 +97,11 @@ export class ComboManager {
     return this.maxCombo;
   }
   
-  getComboMultiplier() {
-    // Every 5 combo adds 0.5x multiplier
-    return 1 + Math.floor(this.combo / 5) * 0.5;
+  getMultiplier() {
+    // Return combo multiplier based on current combo
+    if (this.combo >= 20) return 3;
+    if (this.combo >= 10) return 2;
+    if (this.combo >= 5) return 1.5;
+    return 1;
   }
 }
