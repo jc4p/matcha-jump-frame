@@ -391,7 +391,7 @@ export class Game extends GameEngine {
         if (obj.render && this.camera.isInView(obj)) {
           // Pass shield status to player for glow effect
           if (obj === this.player) {
-            const hasActiveShield = this.availablePowerUp === 'shield';
+            const hasActiveShield = this.availablePowerUp === 'shield' || this.powerUpManager.isActive('shield');
             obj.render(ctx, hasActiveShield ? 1 : 0);
           } else {
             obj.render(ctx);
@@ -1233,14 +1233,16 @@ export class Game extends GameEngine {
     }
     
     // Show available power-up button
-    if (this.availablePowerUp) {
+    const currentPowerUp = this.availablePowerUp || (this.powerUpManager.isActive('shield') ? 'shield' : null);
+    if (currentPowerUp) {
       const powerUpInfo = {
         rocket: { icon: '🚀', color: '#ef4444' },
+        shield: { icon: '🛡️', color: '#3b82f6' },
         magnet: { icon: '🧲', color: '#8b5cf6' },
         slowTime: { icon: '⏱️', color: '#10b981' }
       };
       
-      const info = powerUpInfo[this.availablePowerUp];
+      const info = powerUpInfo[currentPowerUp];
       if (info) {
         // Draw power-up button in bottom right
         const btnX = this.width - 60;
@@ -1434,7 +1436,7 @@ export class Game extends GameEngine {
     
     // Shield effect - check for fall protection (activate closer to bottom of screen)
     if (this.player && this.player.y > this.camera.y + this.height - 50 && 
-        this.player.velocityY > 0 && this.availablePowerUp === 'shield') {
+        this.player.velocityY > 0 && (this.availablePowerUp === 'shield' || this.powerUpManager.isActive('shield'))) {
       
       // Track shield usage
       if (!this.powerUpsUsedThisGame['shield']) {
@@ -1451,8 +1453,12 @@ export class Game extends GameEngine {
         }
       }
       
-      // Consume the shield
-      this.availablePowerUp = null;
+      // Consume the shield from whichever system it came from
+      if (this.availablePowerUp === 'shield') {
+        this.availablePowerUp = null;
+      } else if (this.powerUpManager.isActive('shield')) {
+        this.powerUpManager.useShield();
+      }
       
       // Bounce player back up
       this.player.velocityY = -800;
