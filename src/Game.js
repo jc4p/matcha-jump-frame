@@ -1232,17 +1232,15 @@ export class Game extends GameEngine {
       ctx.fillText('Touch left or right side to move', this.width / 2, this.height - 40);
     }
     
-    // Show available power-up button
-    const currentPowerUp = this.availablePowerUp || (this.powerUpManager.isActive('shield') ? 'shield' : null);
-    if (currentPowerUp) {
+    // Show available power-up button (but not shield since it's automatic)
+    if (this.availablePowerUp && this.availablePowerUp !== 'shield') {
       const powerUpInfo = {
         rocket: { icon: '🚀', color: '#ef4444' },
-        shield: { icon: '🛡️', color: '#3b82f6' },
         magnet: { icon: '🧲', color: '#8b5cf6' },
         slowTime: { icon: '⏱️', color: '#10b981' }
       };
       
-      const info = powerUpInfo[currentPowerUp];
+      const info = powerUpInfo[this.availablePowerUp];
       if (info) {
         // Draw power-up button in bottom right
         const btnX = this.width - 60;
@@ -1263,12 +1261,10 @@ export class Game extends GameEngine {
         ctx.fillStyle = '#fff';
         ctx.fillText(info.icon, btnX, btnY + 10);
         
-        // Instructions (don't show for shield since it's automatic)
-        if (currentPowerUp !== 'shield') {
-          ctx.font = '12px Arial';
-          ctx.fillStyle = '#333';
-          ctx.fillText('Double tap', btnX, btnY - 40);
-        }
+        // Instructions
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#333';
+        ctx.fillText('Double tap', btnX, btnY - 40);
       }
     }
     
