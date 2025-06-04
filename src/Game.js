@@ -671,13 +671,23 @@ export class Game extends GameEngine {
       ctx.textAlign = 'center';
       ctx.fillText(this.paymentState === 'processing' ? 'Processing payment...' : 'Verifying transaction...', this.width / 2, this.height / 2);
       
-      // Loading spinner animation
-      const time = Date.now() * 0.005;
-      ctx.strokeStyle = this.paymentState === 'processing' ? '#8b5cf6' : '#4a7c59';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(this.width / 2, this.height / 2 + 50, 20, time, time + Math.PI * 1.5);
-      ctx.stroke();
+      // Loading dots animation
+      const time = Date.now() * 0.01;
+      const centerX = this.width / 2;
+      const centerY = this.height / 2 + 50;
+      const dotColor = this.paymentState === 'processing' ? '#8b5cf6' : '#4a7c59';
+      
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2 + time;
+        const x = centerX + Math.cos(angle) * 15;
+        const y = centerY + Math.sin(angle) * 15;
+        const opacity = 0.3 + 0.7 * Math.sin(time * 2 + i * 0.5);
+        
+        ctx.fillStyle = dotColor + Math.floor(opacity * 255).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else if (this.paymentState === 'success') {
       // Success state for main menu
       ctx.fillStyle = '#10b981';
@@ -1110,13 +1120,23 @@ export class Game extends GameEngine {
       ctx.textAlign = 'center';
       ctx.fillText(this.paymentState === 'processing' ? 'Processing payment...' : 'Verifying transaction...', this.width / 2, 320);
       
-      // Loading spinner animation
-      const time = Date.now() * 0.005;
-      ctx.strokeStyle = this.paymentState === 'processing' ? '#f59e0b' : '#4a7c59';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(this.width / 2, 380, 20, time, time + Math.PI * 1.5);
-      ctx.stroke();
+      // Loading dots animation
+      const time = Date.now() * 0.01;
+      const centerX = this.width / 2;
+      const centerY = 380;
+      const dotColor = this.paymentState === 'processing' ? '#f59e0b' : '#4a7c59';
+      
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2 + time;
+        const x = centerX + Math.cos(angle) * 15;
+        const y = centerY + Math.sin(angle) * 15;
+        const opacity = 0.3 + 0.7 * Math.sin(time * 2 + i * 0.5);
+        
+        ctx.fillStyle = dotColor + Math.floor(opacity * 255).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else if (this.paymentState === 'error') {
       // Show error state for continue payment
       ctx.fillStyle = '#dc2626';
@@ -1261,6 +1281,10 @@ export class Game extends GameEngine {
         if (platform.isDestroyed) continue;
         
         const platformBounds = platform.getBounds();
+        
+        // Only allow collision if platform is visible on screen (not below camera view)
+        const cameraBottom = this.camera.y + this.height;
+        if (platformBounds.top > cameraBottom) continue;
         
         if (playerBounds.bottom > platformBounds.top &&
             playerBounds.bottom < platformBounds.bottom &&
@@ -1510,26 +1534,44 @@ export class Game extends GameEngine {
       ctx.font = '16px Arial';
       ctx.fillText('Processing payment...', this.width / 2, modalY + 200);
       
-      // Loading spinner animation
-      const time = Date.now() * 0.005;
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(this.width / 2, modalY + 250, 20, time, time + Math.PI * 1.5);
-      ctx.stroke();
+      // Loading dots animation
+      const time = Date.now() * 0.01;
+      const centerX = this.width / 2;
+      const centerY = modalY + 250;
+      
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2 + time;
+        const x = centerX + Math.cos(angle) * 15;
+        const y = centerY + Math.sin(angle) * 15;
+        const opacity = 0.3 + 0.7 * Math.sin(time * 2 + i * 0.5);
+        
+        ctx.fillStyle = '#f59e0b' + Math.floor(opacity * 255).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else if (this.paymentState === 'verifying') {
       // Verifying state
       ctx.fillStyle = '#666';
       ctx.font = '16px Arial';
       ctx.fillText('Verifying transaction...', this.width / 2, modalY + 200);
       
-      // Loading spinner animation
-      const time = Date.now() * 0.005;
-      ctx.strokeStyle = '#4a7c59';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(this.width / 2, modalY + 250, 20, time, time + Math.PI * 1.5);
-      ctx.stroke();
+      // Loading dots animation
+      const time = Date.now() * 0.01;
+      const centerX = this.width / 2;
+      const centerY = modalY + 250;
+      
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2 + time;
+        const x = centerX + Math.cos(angle) * 15;
+        const y = centerY + Math.sin(angle) * 15;
+        const opacity = 0.3 + 0.7 * Math.sin(time * 2 + i * 0.5);
+        
+        ctx.fillStyle = '#4a7c59' + Math.floor(opacity * 255).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else if (this.paymentState === 'error') {
       // Error state
       ctx.fillStyle = '#dc2626';
@@ -1629,26 +1671,44 @@ export class Game extends GameEngine {
       ctx.font = '16px Arial';
       ctx.fillText('Processing payment...', this.width / 2, modalY + 250);
       
-      // Loading spinner animation
-      const time = Date.now() * 0.005;
-      ctx.strokeStyle = '#8b5cf6';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(this.width / 2, modalY + 300, 20, time, time + Math.PI * 1.5);
-      ctx.stroke();
+      // Loading dots animation
+      const time = Date.now() * 0.01;
+      const centerX = this.width / 2;
+      const centerY = modalY + 300;
+      
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2 + time;
+        const x = centerX + Math.cos(angle) * 15;
+        const y = centerY + Math.sin(angle) * 15;
+        const opacity = 0.3 + 0.7 * Math.sin(time * 2 + i * 0.5);
+        
+        ctx.fillStyle = '#8b5cf6' + Math.floor(opacity * 255).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else if (this.paymentState === 'verifying') {
       // Verifying state
       ctx.fillStyle = '#666';
       ctx.font = '16px Arial';
       ctx.fillText('Verifying transaction...', this.width / 2, modalY + 250);
       
-      // Loading spinner animation
-      const time = Date.now() * 0.005;
-      ctx.strokeStyle = '#4a7c59';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(this.width / 2, modalY + 300, 20, time, time + Math.PI * 1.5);
-      ctx.stroke();
+      // Loading dots animation
+      const time = Date.now() * 0.01;
+      const centerX = this.width / 2;
+      const centerY = modalY + 300;
+      
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2 + time;
+        const x = centerX + Math.cos(angle) * 15;
+        const y = centerY + Math.sin(angle) * 15;
+        const opacity = 0.3 + 0.7 * Math.sin(time * 2 + i * 0.5);
+        
+        ctx.fillStyle = '#4a7c59' + Math.floor(opacity * 255).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else if (this.paymentState === 'error') {
       // Error state
       ctx.fillStyle = '#dc2626';
