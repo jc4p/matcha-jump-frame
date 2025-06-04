@@ -12,6 +12,9 @@ import { ParticleManager } from './managers/ParticleManager.js';
 import { AudioManager } from './managers/AudioManager.js';
 import { PowerUpManager } from './managers/PowerUpManager.js';
 import { ComboManager } from './managers/ComboManager.js';
+import { BackgroundManager } from './managers/BackgroundManager.js';
+import { paymentService } from './services/PaymentService.js';
+import { hapticsService } from './services/HapticsService.js';
 
 export class Game extends GameEngine {
   constructor(canvas) {
@@ -62,6 +65,11 @@ export class Game extends GameEngine {
     this.audioManager = new AudioManager();
     this.powerUpManager = new PowerUpManager();
     this.comboManager = new ComboManager();
+    this.backgroundManager = new BackgroundManager(window.innerWidth, window.innerHeight);
+    
+    // Payment state
+    this.paymentState = null; // null, 'processing', 'verifying'
+    this.paymentModal = null; // 'continue', 'powerups'
     
     this.init();
   }
@@ -123,7 +131,7 @@ export class Game extends GameEngine {
       if (this.gameState === 'menu') {
         this.handleMenuClick(x, y);
       } else if (this.gameState === 'gameOver') {
-        this.showMenu();
+        this.handleGameOverClick(x, y);
       }
     });
     
@@ -140,7 +148,7 @@ export class Game extends GameEngine {
       if (this.gameState === 'menu') {
         this.handleMenuClick(x, y);
       } else if (this.gameState === 'gameOver') {
-        this.showMenu();
+        this.handleGameOverClick(x, y);
       } else if (this.gameState === 'playing') {
         // Double tap to use power-up
         const now = Date.now();
@@ -157,26 +165,20 @@ export class Game extends GameEngine {
       const multiplier = this.powerUpManager.getScoreMultiplier();
       const comboMultiplier = this.comboManager.getMultiplier();
       this.score += coin.value * multiplier * comboMultiplier;
+      hapticsService.collectCoin();
     });
     
     // Handle combo bonus points
     eventBus.on(Events.COMBO_MILESTONE, (data) => {
       if (data.bonus) {
         this.score += data.bonus;
+        hapticsService.comboMilestone();
       }
     });
     
-    // Haptic feedback for Frame
+    // Haptic feedback - now supports both Frame SDK and Vibration API
     eventBus.on(Events.HAPTIC_TRIGGER, async (type) => {
-      try {
-        if (type === 'light') {
-          await frame.sdk.actions.hapticFeedback.impactOccurred('light');
-        } else if (type === 'heavy') {
-          await frame.sdk.actions.hapticFeedback.impactOccurred('heavy');
-        }
-      } catch (e) {
-        // Haptics not available
-      }
+      await hapticsService.trigger(type);
     });
     
     // Keyboard controls for power-up
@@ -278,6 +280,9 @@ export class Game extends GameEngine {
       // Update camera
       this.camera.update();
       
+      // Update background
+      this.backgroundManager.update(this.camera.y, deltaTime);
+      
       // Update combo manager
       this.comboManager.update(deltaTime); // Use real time for UI
       
@@ -329,17 +334,19 @@ export class Game extends GameEngine {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
     
-    // Background
-    ctx.fillStyle = '#87CEEB';
-    ctx.fillRect(0, 0, this.width, this.height);
-    
     if (this.gameState === 'loading') {
+      // Simple background for loading
+      ctx.fillStyle = '#87CEEB';
+      ctx.fillRect(0, 0, this.width, this.height);
       this.renderLoading();
     } else if (this.gameState === 'menu') {
       this.renderMenu(ctx);
     } else if (this.gameState === 'gameOver') {
       this.renderGameOver(ctx);
     } else if (this.gameState === 'playing') {
+      // Render parallax background
+      this.backgroundManager.render(ctx, this.camera.y);
+      
       // Apply camera transform
       this.camera.applyTransform(ctx);
       
@@ -401,6 +408,8 @@ export class Game extends GameEngine {
     
     if (this.menuState === 'main') {
       this.renderMainMenu(ctx);
+    } else if (this.menuState === 'shop') {
+      this.renderMenuPowerUpShop(ctx);
     } else if (this.menuState === 'powerups') {
       this.renderPowerUpShop(ctx);
     } else if (this.menuState === 'pre-game') {
@@ -501,40 +510,35 @@ export class Game extends GameEngine {
       }
     });
     
-    // Selected power-up description
+    // Selected power-up description (moved up)
     if (this.selectedPowerUp && powerUpInfo[this.selectedPowerUp]) {
       const selectedInfo = powerUpInfo[this.selectedPowerUp];
       
       // Description box
       ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
       ctx.beginPath();
-      ctx.roundRect(this.width / 2 - 100, 530, 200, 60, 8);
+      ctx.roundRect(this.width / 2 - 100, 510, 200, 60, 8);
       ctx.fill();
       
       ctx.strokeStyle = selectedInfo.color;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(this.width / 2 - 100, 530, 200, 60, 8);
+      ctx.roundRect(this.width / 2 - 100, 510, 200, 60, 8);
       ctx.stroke();
       
       // Power-up name and description
       ctx.fillStyle = '#333';
       ctx.font = 'bold 18px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(`${selectedInfo.icon} ${this.selectedPowerUp.toUpperCase()}`, this.width / 2, 555);
+      ctx.fillText(`${selectedInfo.icon} ${this.selectedPowerUp.toUpperCase()}`, this.width / 2, 535);
       
       ctx.font = '14px Arial';
       ctx.fillStyle = '#666';
-      ctx.fillText(selectedInfo.desc, this.width / 2, 575);
+      ctx.fillText(selectedInfo.desc, this.width / 2, 555);
     }
     
-    // High score at bottom
-    if (this.highScore > 0) {
-      ctx.fillStyle = '#666';
-      ctx.font = '18px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(`High Score: ${this.highScore.toLocaleString()}`, this.width / 2, this.height - 30);
-    }
+    // Buy more power-ups button (moved up slightly)
+    this.drawButton(ctx, this.width / 2, 610, 200, 40, '🛍️ BUY POWER-UPS', '#8b5cf6');
   }
   
   // Helper function to shade colors
@@ -611,6 +615,84 @@ export class Game extends GameEngine {
       ctx.beginPath();
       ctx.arc(x, y, 3 + Math.sin(time * 3 + i) * 1, 0, Math.PI * 2);
       ctx.fill();
+    }
+  }
+  
+  renderMenuPowerUpShop(ctx) {
+    // Back button
+    this.drawButton(ctx, 60, 50, 80, 40, '← Back', '#666');
+    
+    if (this.paymentState === 'processing' || this.paymentState === 'verifying') {
+      // Loading state
+      ctx.fillStyle = '#666';
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(this.paymentState === 'processing' ? 'Processing payment...' : 'Verifying transaction...', this.width / 2, this.height / 2);
+      
+      // Loading spinner animation
+      const time = Date.now() * 0.001;
+      ctx.strokeStyle = this.paymentState === 'processing' ? '#8b5cf6' : '#4a7c59';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(this.width / 2, this.height / 2 + 50, 20, time * 2, time * 2 + Math.PI * 1.5);
+      ctx.stroke();
+    } else {
+      // Power-up options
+      const powerUpInfo = [
+        { type: 'rocket', icon: '🚀', name: 'Rocket x3', price: '0.0005 HYPE', color: '#ef4444' },
+        { type: 'shield', icon: '🛡️', name: 'Shield x3', price: '0.0005 HYPE', color: '#3b82f6' },
+        { type: 'magnet', icon: '🧲', name: 'Magnet x3', price: '0.0005 HYPE', color: '#8b5cf6' },
+        { type: 'slowTime', icon: '⏱️', name: 'Slow Time x3', price: '0.0005 HYPE', color: '#10b981' },
+        { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: '0.0015 HYPE', color: '#f59e0b' }
+      ];
+      
+      let y = 100; // Move down to avoid back button
+      
+      // Current inventory (bigger)
+      ctx.fillStyle = '#333';
+      ctx.font = '700 20px Rubik, Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Current Inventory', this.width / 2, y);
+      
+      ctx.font = '24px Arial';
+      const invText = `🚀 ${this.powerUpInventory.rocket}  🛡️ ${this.powerUpInventory.shield}  🧲 ${this.powerUpInventory.magnet}  ⏱️ ${this.powerUpInventory.slowTime}`;
+      ctx.fillText(invText, this.width / 2, y + 35);
+      
+      y += 70;
+      
+      for (const info of powerUpInfo) {
+        // Power-up row
+        ctx.fillStyle = '#f3f4f6';
+        ctx.beginPath();
+        ctx.roundRect(this.width / 2 - 160, y, 320, 60, 8);
+        ctx.fill();
+        
+        // Icon
+        ctx.font = '28px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(info.icon, this.width / 2 - 140, y + 38);
+        
+        // Name
+        ctx.fillStyle = '#333';
+        ctx.font = '600 18px Rubik, Arial';
+        ctx.fillText(info.name, this.width / 2 - 100, y + 28);
+        
+        // Price
+        ctx.fillStyle = info.color;
+        ctx.font = '700 16px Rubik, Arial';
+        ctx.fillText(info.price, this.width / 2 - 100, y + 48);
+        
+        // Buy button
+        this.drawButton(ctx, this.width / 2 + 100, y + 30, 60, 35, 'BUY', info.color);
+        
+        y += 70;
+      }
+      
+      // Info text
+      ctx.fillStyle = '#666';
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Purchases give 3 uses of each power-up', this.width / 2, this.height - 30);
     }
   }
   
@@ -727,9 +809,11 @@ export class Game extends GameEngine {
   }
   
   drawButton(ctx, x, y, width, height, text, color) {
-    // Button shadow
+    // Button shadow with rounded corners
     ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    ctx.fillRect(x - width/2 + 4, y - height/2 + 4, width, height);
+    ctx.beginPath();
+    ctx.roundRect(x - width/2 + 4, y - height/2 + 4, width, height, 12);
+    ctx.fill();
     
     // Button background with rounded corners
     ctx.fillStyle = color;
@@ -760,6 +844,7 @@ export class Game extends GameEngine {
     if (this.menuState === 'main') {
       // Play button - updated position
       if (y >= 175 && y <= 245 && x >= this.width/2 - 120 && x <= this.width/2 + 120) {
+        eventBus.emit(Events.HAPTIC_TRIGGER, 'medium');
         this.startGameWithPowerUp();
         return;
       }
@@ -778,11 +863,49 @@ export class Game extends GameEngine {
         
         if (x >= btnX - 35 && x <= btnX + 35 && y >= btnY - 30 && y <= btnY + 30) {
           if (this.powerUpInventory[type] > 0) {
+            eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
             this.selectedPowerUp = this.selectedPowerUp === type ? null : type;
           }
         }
       });
+      
+      // Buy more button
+      if (this.isPointInButton(x, y, this.width / 2, 610, 200, 40)) {
+        this.menuState = 'shop';
+        eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
+        return;
+      }
     } 
+    else if (this.menuState === 'shop') {
+      // Back button
+      if (this.isPointInButton(x, y, 60, 50, 80, 40)) {
+        this.menuState = 'main';
+        this.paymentState = null;
+        eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
+        return;
+      }
+      
+      if (this.paymentState === null) {
+        // Power-up buy buttons
+        const powerUpInfo = [
+          { type: 'rocket', icon: '🚀', name: 'Rocket x3', price: '0.0005 HYPE', color: '#ef4444' },
+          { type: 'shield', icon: '🛡️', name: 'Shield x3', price: '0.0005 HYPE', color: '#3b82f6' },
+          { type: 'magnet', icon: '🧲', name: 'Magnet x3', price: '0.0005 HYPE', color: '#8b5cf6' },
+          { type: 'slowTime', icon: '⏱️', name: 'Slow Time x3', price: '0.0005 HYPE', color: '#10b981' },
+          { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: '0.0015 HYPE', color: '#f59e0b' }
+        ];
+        
+        let y = 170; // Start y position (adjusted for moved layout)
+        for (const info of powerUpInfo) {
+          // Buy button position
+          if (this.isPointInButton(x, y, this.width / 2 + 100, y + 30, 60, 35)) {
+            this.processPowerUpPurchase(info.type);
+            return;
+          }
+          y += 70;
+        }
+      }
+    }
     else if (this.menuState === 'powerups') {
       // This state is no longer used
       this.menuState = 'main';
@@ -842,6 +965,7 @@ export class Game extends GameEngine {
       });
       this.availablePowerUp = null; // Power-up is consumed
       eventBus.emit(Events.POWERUP_USE, this.availablePowerUp);
+      eventBus.emit(Events.HAPTIC_TRIGGER, 'success');
     }
   }
   
@@ -857,45 +981,83 @@ export class Game extends GameEngine {
     ctx.fillStyle = '#333';
     ctx.font = '700 48px Rubik, Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('Game Over!', this.width / 2, 100);
+    ctx.fillText('Game Over!', this.width / 2, 80);
     
     // Score box with shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
     ctx.beginPath();
-    ctx.roundRect(this.width / 2 - 150 + 4, 160 + 4, 300, 120, 12);
+    ctx.roundRect(this.width / 2 - 150 + 4, 140 + 4, 300, 100, 12);
     ctx.fill();
     
     ctx.fillStyle = '#f3f4f6';
     ctx.beginPath();
-    ctx.roundRect(this.width / 2 - 150, 160, 300, 120, 12);
+    ctx.roundRect(this.width / 2 - 150, 140, 300, 100, 12);
     ctx.fill();
     
     const finalScore = this.baseHeightScore + this.score;
     
     ctx.fillStyle = '#333';
-    ctx.font = '700 36px Rubik, Arial';
-    ctx.fillText(`Score: ${finalScore.toLocaleString()}`, this.width / 2, 210);
+    ctx.font = '700 32px Rubik, Arial';
+    ctx.fillText(`Score: ${finalScore.toLocaleString()}`, this.width / 2, 185);
     
-    ctx.font = '500 24px Rubik, Arial';
+    ctx.font = '500 20px Rubik, Arial';
     ctx.fillStyle = finalScore > this.highScore ? '#4a7c59' : '#666';
     ctx.fillText(finalScore > this.highScore ? 'NEW HIGH SCORE!' : `High Score: ${this.highScore.toLocaleString()}`, 
-                 this.width / 2, 250);
+                 this.width / 2, 220);
     
-    // Return to menu button
-    this.drawButton(ctx, this.width / 2, 350, 200, 60, '🏠 MENU', '#4a7c59');
-    
-    // Stats
-    ctx.fillStyle = '#666';
-    ctx.font = '16px Arial';
-    ctx.fillText('Tap to return to menu', this.width / 2, 450);
+    // Show payment modal or regular game over options
+    if (this.paymentModal === 'powerups') {
+      this.renderPowerUpPurchaseModal(ctx);
+    } else if (this.paymentState === 'processing' || this.paymentState === 'verifying') {
+      // Show loading state for continue payment
+      ctx.fillStyle = '#666';
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(this.paymentState === 'processing' ? 'Processing payment...' : 'Verifying transaction...', this.width / 2, 320);
+      
+      // Loading spinner animation
+      const time = Date.now() * 0.001;
+      ctx.strokeStyle = this.paymentState === 'processing' ? '#f59e0b' : '#4a7c59';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(this.width / 2, 380, 20, time * 2, time * 2 + Math.PI * 1.5);
+      ctx.stroke();
+    } else {
+      // Continue button (payment)
+      this.drawButton(ctx, this.width / 2, 290, 240, 60, '💳 CONTINUE (0.001 HYPE)', '#f59e0b');
+      
+      // Power-ups button if inventory is low
+      let showPowerUpShop = false;
+      for (const [type, count] of Object.entries(this.powerUpInventory)) {
+        if (count === 0) {
+          showPowerUpShop = true;
+          break;
+        }
+      }
+      
+      if (showPowerUpShop) {
+        this.drawButton(ctx, this.width / 2, 360, 240, 60, '🛍️ BUY POWER-UPS', '#8b5cf6');
+      }
+      
+      // Return to menu button
+      this.drawButton(ctx, this.width / 2, showPowerUpShop ? 430 : 360, 200, 50, '🏠 MENU', '#4a7c59');
+      
+      // Info
+      ctx.fillStyle = '#666';
+      ctx.font = '14px Arial';
+      ctx.fillText('Continue playing or return to menu', this.width / 2, this.height - 40);
+    }
   }
   
   renderUI(ctx) {
     // Calculate display score
     const displayScore = this.baseHeightScore + this.score;
     
-    // Score
-    ctx.fillStyle = '#333';
+    // Check if we're in dark theme (space)
+    const isDarkTheme = Math.abs(this.camera.y) > 15000;
+    
+    // Score - white text for dark backgrounds
+    ctx.fillStyle = isDarkTheme ? '#fff' : '#333';
     ctx.font = '700 24px Rubik, Arial';
     ctx.textAlign = 'left';
     ctx.fillText(`Score: ${displayScore.toLocaleString()}`, 20, 40);
@@ -931,8 +1093,8 @@ export class Game extends GameEngine {
     if ('ontouchstart' in window && this.showTouchHint) {
       const alpha = Math.min(1, this.touchHintTimer);
       
-      // Simple text instruction
-      ctx.fillStyle = `rgba(0, 0, 0, ${0.5 * alpha})`;
+      // Simple text instruction - white for dark theme
+      ctx.fillStyle = isDarkTheme ? `rgba(255, 255, 255, ${0.7 * alpha})` : `rgba(0, 0, 0, ${0.5 * alpha})`;
       ctx.font = '16px Arial';
       ctx.textAlign = 'center';
       ctx.fillText('Touch left or right side to move', this.width / 2, this.height - 40);
@@ -1150,8 +1312,381 @@ export class Game extends GameEngine {
   gameOver() {
     this.gameState = 'gameOver';
     this.pause();
+    this.paymentModal = null;
+    this.paymentState = null;
     eventBus.emit(Events.GAME_OVER);
     eventBus.emit(Events.HAPTIC_TRIGGER, 'heavy');
+    this.startGameOverAnimation();
+  }
+  
+  startGameOverAnimation() {
+    const animate = () => {
+      if (this.gameState === 'gameOver') {
+        this.render();
+        requestAnimationFrame(animate);
+      }
+    };
+    animate();
+  }
+  
+  renderPayToContinueModal(ctx) {
+    // Modal background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, this.width, this.height);
+    
+    // Modal box
+    const modalWidth = 320;
+    const modalHeight = 400;
+    const modalX = (this.width - modalWidth) / 2;
+    const modalY = (this.height - modalHeight) / 2;
+    
+    // Modal shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.beginPath();
+    ctx.roundRect(modalX + 4, modalY + 4, modalWidth, modalHeight, 16);
+    ctx.fill();
+    
+    // Modal background
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.roundRect(modalX, modalY, modalWidth, modalHeight, 16);
+    ctx.fill();
+    
+    // Header
+    ctx.fillStyle = '#333';
+    ctx.font = '700 24px Rubik, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Continue Playing?', this.width / 2, modalY + 50);
+    
+    if (this.paymentState === 'processing') {
+      // Loading state
+      ctx.fillStyle = '#666';
+      ctx.font = '16px Arial';
+      ctx.fillText('Processing payment...', this.width / 2, modalY + 200);
+      
+      // Loading spinner animation
+      const time = Date.now() * 0.001;
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(this.width / 2, modalY + 250, 20, time * 2, time * 2 + Math.PI * 1.5);
+      ctx.stroke();
+    } else if (this.paymentState === 'verifying') {
+      // Verifying state
+      ctx.fillStyle = '#666';
+      ctx.font = '16px Arial';
+      ctx.fillText('Verifying transaction...', this.width / 2, modalY + 200);
+      
+      // Loading spinner animation
+      const time = Date.now() * 0.001;
+      ctx.strokeStyle = '#4a7c59';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(this.width / 2, modalY + 250, 20, time * 2, time * 2 + Math.PI * 1.5);
+      ctx.stroke();
+    } else {
+      // Payment info
+      ctx.fillStyle = '#666';
+      ctx.font = '16px Arial';
+      ctx.fillText('Continue from a safe position', this.width / 2, modalY + 90);
+      ctx.fillText('and keep your current score!', this.width / 2, modalY + 110);
+      
+      // Price box
+      ctx.fillStyle = '#f3f4f6';
+      ctx.beginPath();
+      ctx.roundRect(modalX + 60, modalY + 140, 200, 80, 8);
+      ctx.fill();
+      
+      ctx.fillStyle = '#333';
+      ctx.font = '700 28px Rubik, Arial';
+      ctx.fillText('0.001 HYPE', this.width / 2, modalY + 185);
+      
+      ctx.fillStyle = '#666';
+      ctx.font = '14px Arial';
+      ctx.fillText('One-time payment', this.width / 2, modalY + 205);
+      
+      // Pay button
+      this.drawButton(ctx, this.width / 2, modalY + 270, 200, 50, '💳 PAY NOW', '#f59e0b');
+      
+      // Cancel button
+      this.drawButton(ctx, this.width / 2, modalY + 330, 200, 50, 'CANCEL', '#6b7280');
+    }
+  }
+  
+  renderPowerUpPurchaseModal(ctx) {
+    // Modal background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, this.width, this.height);
+    
+    // Modal box
+    const modalWidth = 340;
+    const modalHeight = 500;
+    const modalX = (this.width - modalWidth) / 2;
+    const modalY = (this.height - modalHeight) / 2;
+    
+    // Modal shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.beginPath();
+    ctx.roundRect(modalX + 4, modalY + 4, modalWidth, modalHeight, 16);
+    ctx.fill();
+    
+    // Modal background
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.roundRect(modalX, modalY, modalWidth, modalHeight, 16);
+    ctx.fill();
+    
+    // Header
+    ctx.fillStyle = '#333';
+    ctx.font = '700 24px Rubik, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Power-Up Shop', this.width / 2, modalY + 50);
+    
+    if (this.paymentState === 'processing') {
+      // Loading state
+      ctx.fillStyle = '#666';
+      ctx.font = '16px Arial';
+      ctx.fillText('Processing payment...', this.width / 2, modalY + 250);
+      
+      // Loading spinner animation
+      const time = Date.now() * 0.001;
+      ctx.strokeStyle = '#8b5cf6';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(this.width / 2, modalY + 300, 20, time * 2, time * 2 + Math.PI * 1.5);
+      ctx.stroke();
+    } else if (this.paymentState === 'verifying') {
+      // Verifying state
+      ctx.fillStyle = '#666';
+      ctx.font = '16px Arial';
+      ctx.fillText('Verifying transaction...', this.width / 2, modalY + 250);
+      
+      // Loading spinner animation
+      const time = Date.now() * 0.001;
+      ctx.strokeStyle = '#4a7c59';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(this.width / 2, modalY + 300, 20, time * 2, time * 2 + Math.PI * 1.5);
+      ctx.stroke();
+    } else {
+      // Power-up options
+      const powerUpInfo = [
+        { type: 'rocket', icon: '🚀', name: 'Rocket x3', price: '0.0005 HYPE', color: '#ef4444' },
+        { type: 'shield', icon: '🛡️', name: 'Shield x3', price: '0.0005 HYPE', color: '#3b82f6' },
+        { type: 'magnet', icon: '🧲', name: 'Magnet x3', price: '0.0005 HYPE', color: '#8b5cf6' },
+        { type: 'slowTime', icon: '⏱️', name: 'Slow Time x3', price: '0.0005 HYPE', color: '#10b981' },
+        { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: '0.0015 HYPE', color: '#f59e0b' }
+      ];
+      
+      let y = modalY + 90;
+      
+      for (const info of powerUpInfo) {
+        // Power-up row
+        ctx.fillStyle = '#f3f4f6';
+        ctx.beginPath();
+        ctx.roundRect(modalX + 20, y, modalWidth - 40, 60, 8);
+        ctx.fill();
+        
+        // Icon
+        ctx.font = '28px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(info.icon, modalX + 40, y + 38);
+        
+        // Name
+        ctx.fillStyle = '#333';
+        ctx.font = '600 18px Rubik, Arial';
+        ctx.fillText(info.name, modalX + 80, y + 28);
+        
+        // Price
+        ctx.fillStyle = info.color;
+        ctx.font = '700 16px Rubik, Arial';
+        ctx.fillText(info.price, modalX + 80, y + 48);
+        
+        // Buy button
+        const btnX = modalX + modalWidth - 80;
+        const btnY = y + 30;
+        
+        ctx.fillStyle = info.color;
+        ctx.beginPath();
+        ctx.roundRect(btnX - 25, btnY - 15, 50, 30, 6);
+        ctx.fill();
+        
+        ctx.fillStyle = '#fff';
+        ctx.font = '700 14px Rubik, Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('BUY', btnX, btnY + 3);
+        
+        y += 70;
+      }
+      
+      // Close button
+      ctx.textAlign = 'center';
+      this.drawButton(ctx, this.width / 2, modalY + modalHeight - 60, 160, 40, 'CLOSE', '#6b7280');
+      
+      // Info text
+      ctx.fillStyle = '#666';
+      ctx.font = '12px Arial';
+      ctx.fillText('Purchases give 3 uses of each power-up', this.width / 2, modalY + modalHeight - 20);
+    }
+  }
+  
+  handleGameOverClick(x, y) {
+    if (this.paymentModal === 'powerups') {
+      const modalWidth = 340;
+      const modalHeight = 500;
+      const modalX = (this.width - modalWidth) / 2;
+      const modalY = (this.height - modalHeight) / 2;
+      
+      if (this.paymentState === null) {
+        // Check for power-up buy buttons
+        const powerUpInfo = [
+          { type: 'rocket', icon: '🚀', name: 'Rocket x3', price: '0.0005 ETH', color: '#ef4444' },
+          { type: 'shield', icon: '🛡️', name: 'Shield x3', price: '0.0005 ETH', color: '#3b82f6' },
+          { type: 'magnet', icon: '🧲', name: 'Magnet x3', price: '0.0005 ETH', color: '#8b5cf6' },
+          { type: 'slowTime', icon: '⏱️', name: 'Slow Time x3', price: '0.0005 ETH', color: '#10b981' },
+          { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: '0.0015 ETH', color: '#f59e0b' }
+        ];
+        
+        let y = modalY + 90;
+        for (const info of powerUpInfo) {
+          const btnX = modalX + modalWidth - 80;
+          const btnY = y + 30;
+          
+          if (x >= btnX - 25 && x <= btnX + 25 && y >= btnY - 15 && y <= btnY + 15) {
+            this.processPowerUpPurchase(info.type);
+            return;
+          }
+          
+          y += 70;
+        }
+        
+        // Close button
+        if (this.isPointInButton(x, y, this.width / 2, modalY + modalHeight - 60, 160, 40)) {
+          this.paymentModal = null;
+          eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
+          return;
+        }
+      }
+    } else {
+      // Continue button - direct payment
+      if (this.isPointInButton(x, y, this.width / 2, 290, 240, 60)) {
+        this.processContinuePayment();
+        return;
+      }
+      
+      // Power-ups button (if shown)
+      let showPowerUpShop = false;
+      for (const [type, count] of Object.entries(this.powerUpInventory)) {
+        if (count === 0) {
+          showPowerUpShop = true;
+          break;
+        }
+      }
+      
+      if (showPowerUpShop && this.isPointInButton(x, y, this.width / 2, 360, 240, 60)) {
+        this.paymentModal = 'powerups';
+        eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
+        return;
+      }
+      
+      // Menu button
+      const menuY = showPowerUpShop ? 430 : 360;
+      if (this.isPointInButton(x, y, this.width / 2, menuY, 200, 50)) {
+        this.showMenu();
+        eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
+        return;
+      }
+    }
+  }
+  
+  async processContinuePayment() {
+    try {
+      this.paymentState = 'processing';
+      eventBus.emit(Events.HAPTIC_TRIGGER, 'medium');
+      
+      // Make payment
+      const result = await paymentService.payContinue(
+        this.baseHeightScore + this.score,
+        Math.abs(this.camera.y)
+      );
+      
+      this.paymentState = 'verifying';
+      
+      // Wait for verification (in production this would check the actual transaction)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Success! Continue the game
+      this.continuePlaying();
+      
+    } catch (error) {
+      console.error('Payment failed:', error);
+      this.paymentState = null;
+      this.paymentModal = null;
+      eventBus.emit(Events.HAPTIC_TRIGGER, 'error');
+    }
+  }
+  
+  continuePlaying() {
+    // Reset game over state
+    this.gameState = 'playing';
+    this.paymentModal = null;
+    this.paymentState = null;
+    
+    // Place player on a safe platform
+    const safeY = this.camera.y + this.height / 2;
+    const safeX = this.width / 2;
+    
+    // Create a safe platform for the player
+    const safePlatform = new Platform(safeX, safeY + 100, 'normal', this.assetLoader);
+    this.platforms.push(safePlatform);
+    this.addGameObject(safePlatform);
+    
+    // Reset player position and velocity
+    this.player.x = safeX;
+    this.player.y = safeY;
+    this.player.velocityY = -600; // Give a small boost
+    
+    // Resume game
+    this.start();
+    eventBus.emit(Events.HAPTIC_TRIGGER, 'success');
+  }
+  
+  async processPowerUpPurchase(type) {
+    try {
+      this.paymentState = 'processing';
+      this.selectedPowerUpPurchase = type;
+      eventBus.emit(Events.HAPTIC_TRIGGER, 'medium');
+      
+      // Make payment
+      const result = await paymentService.purchasePowerUps(type, 1);
+      
+      this.paymentState = 'verifying';
+      
+      // Wait for verification
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Success! Add power-ups to inventory
+      if (type === 'bundle') {
+        // Add 3 of each power-up
+        this.powerUpInventory.rocket += 3;
+        this.powerUpInventory.shield += 3;
+        this.powerUpInventory.magnet += 3;
+        this.powerUpInventory.slowTime += 3;
+      } else {
+        // Add 3 of the selected power-up
+        this.powerUpInventory[type] += 3;
+      }
+      
+      // Close modal and show success
+      this.paymentModal = null;
+      this.paymentState = null;
+      eventBus.emit(Events.HAPTIC_TRIGGER, 'success');
+      
+    } catch (error) {
+      console.error('Power-up purchase failed:', error);
+      this.paymentState = null;
+      eventBus.emit(Events.HAPTIC_TRIGGER, 'error');
+    }
   }
   
   loadHighScore() {
