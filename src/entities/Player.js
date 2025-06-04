@@ -5,7 +5,7 @@ export class Player {
     this.x = x;
     this.y = y;
     this.width = 40;
-    this.height = 40;
+    this.height = 48; // Made 20% taller
     this.velocityX = 0;
     this.velocityY = 0;
     this.gravity = 800;

@@ -20,6 +20,7 @@ export const Events = {
   POWERUP_COLLECT: 'powerup:collect',
   POWERUP_ACTIVATE: 'powerup:activate',
   POWERUP_EXPIRE: 'powerup:expire',
+  POWERUP_USE: 'powerup:use',
   
   COIN_COLLECTED: 'coin:collected',
   

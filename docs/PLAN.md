@@ -1,6 +1,6 @@
 # Matcha Jump - Development Plan
 
-## 🎮 Current State (December 2024)
+## 🎮 Current State (January 2025)
 
 ### ✅ What We've Built So Far
 
@@ -25,6 +25,7 @@
    - Mobile controls: Touch left/right halves of screen
    - Desktop controls: Arrow keys
    - Automatic edge wrapping when moving off-screen
+   - **NEW: Player height increased by 20% for better visibility**
 
 2. **Platforms** (`Platform.js`)
    - **Four types fully implemented:**
@@ -44,10 +45,14 @@
 4. **Power-ups** (`PowerUp.js`, `PowerUpManager.js`)
    - **Five types implemented:**
      - **Rocket** - Continuous upward boost (3 seconds)
-     - **Shield** - One-time fall protection
+     - **Shield** - One-time fall protection (threshold adjusted for better gameplay)
      - **Magnet** - Attracts coins from greater distance (5 seconds)
      - **Score Boost** - 2x score multiplier (10 seconds)
      - **Slow Time** - Time dilation effect (visual only, mechanics not implemented)
+   - **NEW: Power-up selection menu system**
+     - Players select power-ups before starting the game
+     - Manual activation during gameplay with spacebar/tap
+     - Visual inventory display showing available power-ups
    - Visual indicators for active power-ups
    - Duration timers and proper cleanup
 
@@ -85,7 +90,12 @@
 
 #### Game States & UI
 - **Menu** - Shows game title and tap to start
+  - **NEW: Animated bouncing player on landing page**
+  - **NEW: Google Fonts integration for better typography**
+  - **NEW: Prettier, more polished button designs**
 - **Playing** - Active gameplay with score tracking
+  - **NEW: Separate height score from bonus score display**
+  - **NEW: Improved UI layout and visual hierarchy**
 - **Game Over** - Shows final score and high score
 - **Score persistence** using localStorage
 - **Mobile-optimized UI** with fading touch instructions
@@ -99,9 +109,50 @@
 - Responsive canvas sizing with proper DPI scaling
 - Frame V2 ready state signaling
 
+## 🚀 Recently Completed (January 2025)
+
+### Landing Page Improvements ✅
+- Added animated bouncing player that lands on platform
+- Integrated Google Fonts for professional typography
+- Redesigned buttons with modern, polished appearance
+- Improved overall visual hierarchy and user experience
+
+### Power-up System Revamp ✅
+- Created power-up selection menu before game start
+- Implemented manual activation system (spacebar/tap)
+- Added visual inventory display during gameplay
+- Players now have strategic control over power-up usage
+
+### Scoring System Fixes ✅
+- Separated height score from bonus score
+- Clearer display of different score components
+- Better visual feedback for scoring events
+
+### UI/UX Improvements ✅
+- Better button styling with hover states
+- Improved font choices using Google Fonts
+- More cohesive visual design throughout
+
+### Gameplay Adjustments ✅
+- Player height increased by 20% for better visibility
+- Shield activation threshold adjusted for better gameplay balance
+
 ## 📋 What Still Needs to Be Done
 
-### 1. Visual Enhancements 🎨
+### 1. Monetization & Continuation Features 💰
+- [ ] **Pay-to-Continue System**
+  - After game over, offer to continue for a fee
+  - Restore player to safe position
+  - Preserve current score and power-ups
+  - Integration with payment system
+
+- [ ] **Power-up Purchase System**
+  - In-game store when inventory is empty
+  - Different power-up packs/bundles
+  - Currency system (coins or real money)
+  - Purchase history tracking
+
+### 2. Visual Enhancements 🎨
 - [ ] **Background System**
   - Parallax layers with clouds
   - Different themes at different heights (Sky → Clouds → Space)
@@ -113,7 +164,7 @@
   - Smooth transitions between game states
   - Visual feedback for height milestones
 
-### 2. Game Features 🎯
+### 3. Game Features 🎯
 - [ ] **Difficulty Progression**
   - Platforms spawn further apart as you go higher
   - More moving/breakable platforms at higher scores
@@ -132,7 +183,7 @@
   - Sticky platforms (slow jump charge)
   - Teleport platforms (warp to other side)
 
-### 3. Power-up Improvements 💪
+### 4. Power-up Improvements 💪
 - [ ] **Additional Power-ups**
   - Double Jump - Jump again in mid-air
   - Size Change - Become tiny or giant temporarily
@@ -141,7 +192,7 @@
   - Actually implement time dilation for gameplay
   - Slow down platform movement and enemy speeds
 
-### 4. Farcaster Social Features 🌐
+### 5. Farcaster Social Features 🌐
 - [ ] **Leaderboard Integration**
   - Submit scores to global leaderboard
   - Show friend's high scores
@@ -158,7 +209,19 @@
   - Frame-specific power-ups
   - Achievement badges
 
-### 5. Meta Features 🏆
+### 6. Haptics Integration 📳
+- [ ] **Regular JavaScript Haptics**
+  - Implement standard Vibration API for mobile devices
+  - Different vibration patterns for different events
+  - User preference settings for haptics
+
+- [ ] **Frame-Specific Haptics**
+  - Implement Frame SDK haptic feedback as described in FRAME_HAPTICS.md
+  - Light haptics for normal jumps and landings
+  - Heavy haptics for power-ups and special events
+  - Custom haptic patterns for combos and achievements
+
+### 7. Meta Features 🏆
 - [ ] **Achievement System**
   - Height milestones
   - Combo achievements
@@ -175,7 +238,7 @@
   - Power-up explanations
   - Advanced technique demonstrations
 
-### 6. Performance & Polish 🚀
+### 8. Performance & Polish 🚀
 - [ ] **Optimization**
   - Object pooling for platforms and particles
   - Frustum culling for off-screen objects
@@ -190,29 +253,38 @@
 
 ## 🎯 Priority Roadmap
 
-### Phase 1: Polish Current Features (1 week)
+### Phase 1: Polish Current Features (1 week) ✅ COMPLETED
 - [x] ~~Add local high score storage~~ ✅
 - [x] ~~Implement particle effects~~ ✅
 - [x] ~~Add coin collectibles~~ ✅
 - [x] ~~Create audio system~~ ✅
 - [x] ~~Implement power-ups~~ ✅
 - [x] ~~Add combo system~~ ✅
+- [x] ~~Landing page improvements~~ ✅
+- [x] ~~Power-up system revamp~~ ✅
+- [x] ~~Scoring system fixes~~ ✅
+- [x] ~~UI/UX improvements~~ ✅
+
+### Phase 2: Monetization & Core Features (1 week) 🚧 IN PROGRESS
+- [ ] Pay-to-continue feature after game over
+- [ ] Power-up purchase system
 - [ ] Fix slow time power-up mechanics
 - [ ] Add difficulty progression
+- [ ] Implement haptics (JS and Frame SDK)
 
-### Phase 2: Visual Enhancement (2 weeks)
+### Phase 3: Visual Enhancement (2 weeks)
 - [ ] Implement parallax backgrounds
 - [ ] Add themed zones (sky, clouds, space)
 - [ ] Create screen shake effects
 - [ ] Polish UI transitions
 
-### Phase 3: Social Integration (2 weeks)
+### Phase 4: Social Integration (2 weeks)
 - [ ] Farcaster leaderboard integration
 - [ ] Score sharing functionality
 - [ ] Friend challenges
 - [ ] Achievement system
 
-### Phase 4: Advanced Features (1 month)
+### Phase 5: Advanced Features (1 month)
 - [ ] Enemy/obstacle system
 - [ ] Additional platform types
 - [ ] Daily challenges
@@ -221,22 +293,37 @@
 
 ## 📊 Current Progress Summary
 
-**Core Gameplay: 90% Complete** ✅
+**Core Gameplay: 95% Complete** ✅
 - All basic mechanics implemented
 - Four platform types working
-- Player controls polished
+- Player controls polished with height adjustment
 - Basic game loop complete
+- Power-up system revamped with manual activation
 
-**Collectibles & Rewards: 85% Complete** ✅
+**UI/UX: 90% Complete** ✅
+- Landing page with animated player
+- Google Fonts integration
+- Polished button designs
+- Improved score display
+- Power-up selection menu
+
+**Collectibles & Rewards: 90% Complete** ✅
 - Coins fully implemented
-- Power-ups working (except time mechanics)
+- Power-ups working with new selection system
 - Combo system active
 - Score persistence done
+- Separated height/bonus scoring
 
-**Audio/Visual: 70% Complete** 🔄
+**Audio/Visual: 75% Complete** 🔄
 - Full audio system implemented
 - Particle effects working
+- Landing page animations added
 - Needs: backgrounds, themes, screen effects
+
+**Monetization: 0% Complete** 💰
+- Needs: pay-to-continue system
+- Needs: power-up purchase system
+- Needs: payment integration
 
 **Social Features: 10% Complete** 📱
 - Frame integration started
@@ -251,14 +338,20 @@
 The game has excellent "juice" with Disney-quality animations. Player movement feels responsive and alive with squash/stretch effects. The audio system adds satisfying feedback for every action. The combo system rewards skilled play, while power-ups add variety and excitement. Mobile controls are intuitive with haptic feedback enhancing the experience.
 
 **What's Working Well:**
-- Tight, responsive controls
+- Tight, responsive controls with improved player visibility
 - Satisfying audio-visual feedback
 - Good variety in platform types
 - Engaging combo system
 - Smooth performance
+- Polished landing page with animations
+- Strategic power-up system with manual activation
+- Clear score separation (height vs bonus)
 
 **Areas for Improvement:**
 - Visual variety (backgrounds, themes)
 - Long-term progression hooks
 - Social competition elements
 - Difficulty curve refinement
+- Monetization features (pay-to-continue, purchases)
+- Haptic feedback implementation
+- Leaderboard integration

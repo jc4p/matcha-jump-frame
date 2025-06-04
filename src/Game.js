@@ -43,6 +43,9 @@ export class Game extends GameEngine {
       slowTime: 3
     };
     
+    // Available power-up in game (selected from menu)
+    this.availablePowerUp = null;
+    
     this.platformSpawnY = 0;
     this.basePlatformSpacing = 80;
     this.platformSpacing = this.basePlatformSpacing;
@@ -138,6 +141,15 @@ export class Game extends GameEngine {
         this.handleMenuClick(x, y);
       } else if (this.gameState === 'gameOver') {
         this.showMenu();
+      } else if (this.gameState === 'playing') {
+        // Double tap to use power-up
+        const now = Date.now();
+        if (!this.lastTapTime) this.lastTapTime = 0;
+        
+        if (now - this.lastTapTime < 300) { // Double tap within 300ms
+          this.usePowerUp();
+        }
+        this.lastTapTime = now;
       }
     });
     
@@ -167,6 +179,14 @@ export class Game extends GameEngine {
       }
     });
     
+    // Keyboard controls for power-up
+    window.addEventListener('keydown', (e) => {
+      if (this.gameState === 'playing' && e.code === 'Space') {
+        e.preventDefault();
+        this.usePowerUp();
+      }
+    });
+    
   }
   
   showMenu() {
@@ -193,6 +213,7 @@ export class Game extends GameEngine {
     this.baseHeightScore = 0;
     this.showTouchHint = true;
     this.touchHintTimer = 3; // Show hint for 3 seconds
+    // Don't reset availablePowerUp here - it's set in startGameWithPowerUp
     
     // Clear existing game objects
     this.gameObjects = [];
@@ -279,7 +300,8 @@ export class Game extends GameEngine {
       // Check if player fell below the camera view
       if (this.player) {
         // Only check for game over after a few frames to let physics settle
-        if (this.lastTime > 100 && this.player.y > this.camera.y + this.height + 50) {
+        // Extended buffer to allow landing on platforms just off screen
+        if (this.lastTime > 100 && this.player.y > this.camera.y + this.height + 150) {
           this.gameOver();
         }
       }
@@ -398,16 +420,16 @@ export class Game extends GameEngine {
     
     // Power-up selection header
     ctx.fillStyle = '#333';
-    ctx.font = 'bold 20px Arial';
+    ctx.font = '500 20px Rubik, Arial';
     ctx.textAlign = 'center';
     ctx.fillText('Select Power-Up:', this.width / 2, 320);
     
     // Power-up toggles (2x2 grid without scoreBoost)
     const powerUpInfo = {
-      rocket: { icon: '🚀', color: '#ef4444', desc: 'Boost upward' },
-      shield: { icon: '🛡️', color: '#3b82f6', desc: 'Fall protection' },
-      magnet: { icon: '🧲', color: '#8b5cf6', desc: 'Attract coins' },
-      slowTime: { icon: '⏱️', color: '#10b981', desc: 'Slow motion' }
+      rocket: { icon: '🚀', color: '#ef4444', desc: 'Double tap to boost' },
+      shield: { icon: '🛡️', color: '#3b82f6', desc: 'Auto-saves from fall' },
+      magnet: { icon: '🧲', color: '#8b5cf6', desc: 'Double tap for magnet' },
+      slowTime: { icon: '⏱️', color: '#10b981', desc: 'Double tap to slow' }
     };
     
     // Center the 2x2 grid - increased spacing from header
@@ -425,29 +447,44 @@ export class Game extends GameEngine {
       const btnX = startX + col * 90;
       const btnY = startY + row * 80;
       
-      // Draw background with gradient
-      const gradient = ctx.createLinearGradient(btnX - 35, btnY - 30, btnX - 35, btnY + 30);
+      // Draw shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.beginPath();
+      ctx.roundRect(btnX - 35 + 2, btnY - 30 + 2, 70, 60, 8);
+      ctx.fill();
+      
+      // Draw background - simple solid colors
       if (isSelected) {
-        gradient.addColorStop(0, info.color);
-        gradient.addColorStop(1, this.shadeColor(info.color, -20));
+        ctx.fillStyle = info.color;
       } else if (hasInventory) {
-        gradient.addColorStop(0, '#f3f4f6');
-        gradient.addColorStop(1, '#e5e7eb');
+        ctx.fillStyle = '#f3f4f6';
       } else {
-        gradient.addColorStop(0, '#9ca3af');
-        gradient.addColorStop(1, '#6b7280');
+        ctx.fillStyle = '#d1d5db';
       }
-      ctx.fillStyle = gradient;
-      ctx.fillRect(btnX - 35, btnY - 30, 70, 60);
+      ctx.beginPath();
+      ctx.roundRect(btnX - 35, btnY - 30, 70, 60, 8);
+      ctx.fill();
+      
+      // Add gradient overlay
+      const btnGradient = ctx.createLinearGradient(btnX, btnY - 30, btnX, btnY + 30);
+      btnGradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+      btnGradient.addColorStop(1, 'rgba(0, 0, 0, 0.1)');
+      ctx.fillStyle = btnGradient;
+      ctx.beginPath();
+      ctx.roundRect(btnX - 35, btnY - 30, 70, 60, 8);
+      ctx.fill();
       
       // Add border for selected
       if (isSelected) {
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 3;
-        ctx.strokeRect(btnX - 35, btnY - 30, 70, 60);
+        ctx.beginPath();
+        ctx.roundRect(btnX - 35, btnY - 30, 70, 60, 8);
+        ctx.stroke();
       }
       
-      // Icon
+      // Icon - make sure fillStyle is set for emoji
+      ctx.fillStyle = isSelected ? '#fff' : '#333';
       ctx.font = '32px Arial';
       ctx.textAlign = 'center';
       ctx.fillText(info.icon, btnX, btnY);
@@ -470,11 +507,15 @@ export class Game extends GameEngine {
       
       // Description box
       ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.fillRect(this.width / 2 - 100, 530, 200, 60);
+      ctx.beginPath();
+      ctx.roundRect(this.width / 2 - 100, 530, 200, 60, 8);
+      ctx.fill();
       
       ctx.strokeStyle = selectedInfo.color;
       ctx.lineWidth = 2;
-      ctx.strokeRect(this.width / 2 - 100, 530, 200, 60);
+      ctx.beginPath();
+      ctx.roundRect(this.width / 2 - 100, 530, 200, 60, 8);
+      ctx.stroke();
       
       // Power-up name and description
       ctx.fillStyle = '#333';
@@ -492,7 +533,7 @@ export class Game extends GameEngine {
       ctx.fillStyle = '#666';
       ctx.font = '18px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(`High Score: ${this.highScore}`, this.width / 2, this.height - 30);
+      ctx.fillText(`High Score: ${this.highScore.toLocaleString()}`, this.width / 2, this.height - 30);
     }
   }
   
@@ -686,13 +727,28 @@ export class Game extends GameEngine {
   }
   
   drawButton(ctx, x, y, width, height, text, color) {
-    // Button background
+    // Button shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillRect(x - width/2 + 4, y - height/2 + 4, width, height);
+    
+    // Button background with rounded corners
     ctx.fillStyle = color;
-    ctx.fillRect(x - width/2, y - height/2, width, height);
+    ctx.beginPath();
+    ctx.roundRect(x - width/2, y - height/2, width, height, 12);
+    ctx.fill();
+    
+    // Button inner highlight
+    const gradient = ctx.createLinearGradient(x, y - height/2, x, y + height/2);
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.1)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.roundRect(x - width/2, y - height/2, width, height, 12);
+    ctx.fill();
     
     // Button text
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 20px Arial';
+    ctx.font = '700 20px Rubik, Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, x, y);
@@ -746,41 +802,46 @@ export class Game extends GameEngine {
     // Use selected power-up from inventory
     if (this.selectedPowerUp && this.powerUpInventory[this.selectedPowerUp] > 0) {
       this.powerUpInventory[this.selectedPowerUp]--;
+      this.availablePowerUp = this.selectedPowerUp;
     }
     
     this.startGame();
     
-    // Activate the selected power-up after a delay
-    if (this.selectedPowerUp) {
-      // Different delays for different power-ups
-      const delays = {
-        rocket: 2000,      // 2 seconds - let player get started
-        shield: 100,       // Immediate - useful from start
-        magnet: 3000,      // 3 seconds - wait for coins to spawn
-        slowTime: 2000     // 2 seconds - let game get going
-      };
-      
-      const delay = delays[this.selectedPowerUp] || 1000;
-      
+    // Only auto-activate shield
+    if (this.selectedPowerUp === 'shield') {
       setTimeout(() => {
         if (this.gameState === 'playing') {
-          // Create a power-up object to activate
-          const powerUpTypes = {
-            rocket: { icon: '🚀', name: 'Rocket', color: '#ef4444', duration: 3000 },
-            shield: { icon: '🛡️', name: 'Shield', color: '#3b82f6', duration: 0 },
-            magnet: { icon: '🧲', name: 'Magnet', color: '#8b5cf6', duration: 5000 },
-            slowTime: { icon: '⏱️', name: 'Slow Time', color: '#10b981', duration: 5000 }
+          const powerUpInfo = {
+            type: 'shield',
+            properties: { icon: '🛡️', name: 'Shield', color: '#3b82f6', duration: 0 }
           };
-          
-          const powerUpInfo = powerUpTypes[this.selectedPowerUp];
-          if (powerUpInfo) {
-            this.powerUpManager.activatePowerUp({
-              type: this.selectedPowerUp,
-              properties: powerUpInfo
-            });
-          }
+          this.powerUpManager.activatePowerUp(powerUpInfo);
+          this.availablePowerUp = null; // Shield is used immediately
         }
-      }, delay);
+      }, 100);
+    }
+  }
+  
+  usePowerUp() {
+    if (!this.availablePowerUp || this.gameState !== 'playing') return;
+    
+    // Don't allow using if already active
+    if (this.powerUpManager.isActive(this.availablePowerUp)) return;
+    
+    const powerUpTypes = {
+      rocket: { icon: '🚀', name: 'Rocket', color: '#ef4444', duration: 3000 },
+      magnet: { icon: '🧲', name: 'Magnet', color: '#8b5cf6', duration: 5000 },
+      slowTime: { icon: '⏱️', name: 'Slow Time', color: '#10b981', duration: 5000 }
+    };
+    
+    const powerUpInfo = powerUpTypes[this.availablePowerUp];
+    if (powerUpInfo) {
+      this.powerUpManager.activatePowerUp({
+        type: this.availablePowerUp,
+        properties: powerUpInfo
+      });
+      this.availablePowerUp = null; // Power-up is consumed
+      eventBus.emit(Events.POWERUP_USE, this.availablePowerUp);
     }
   }
   
@@ -794,23 +855,30 @@ export class Game extends GameEngine {
     
     // Game over title
     ctx.fillStyle = '#333';
-    ctx.font = 'bold 48px Arial';
+    ctx.font = '700 48px Rubik, Arial';
     ctx.textAlign = 'center';
     ctx.fillText('Game Over!', this.width / 2, 100);
     
-    // Score box
+    // Score box with shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    ctx.beginPath();
+    ctx.roundRect(this.width / 2 - 150 + 4, 160 + 4, 300, 120, 12);
+    ctx.fill();
+    
     ctx.fillStyle = '#f3f4f6';
-    ctx.fillRect(this.width / 2 - 150, 160, 300, 120);
+    ctx.beginPath();
+    ctx.roundRect(this.width / 2 - 150, 160, 300, 120, 12);
+    ctx.fill();
     
     const finalScore = this.baseHeightScore + this.score;
     
     ctx.fillStyle = '#333';
-    ctx.font = 'bold 36px Arial';
-    ctx.fillText(`Score: ${finalScore}`, this.width / 2, 210);
+    ctx.font = '700 36px Rubik, Arial';
+    ctx.fillText(`Score: ${finalScore.toLocaleString()}`, this.width / 2, 210);
     
-    ctx.font = '24px Arial';
+    ctx.font = '500 24px Rubik, Arial';
     ctx.fillStyle = finalScore > this.highScore ? '#4a7c59' : '#666';
-    ctx.fillText(finalScore > this.highScore ? 'NEW HIGH SCORE!' : `High Score: ${this.highScore}`, 
+    ctx.fillText(finalScore > this.highScore ? 'NEW HIGH SCORE!' : `High Score: ${this.highScore.toLocaleString()}`, 
                  this.width / 2, 250);
     
     // Return to menu button
@@ -828,15 +896,15 @@ export class Game extends GameEngine {
     
     // Score
     ctx.fillStyle = '#333';
-    ctx.font = 'bold 24px Arial';
+    ctx.font = '700 24px Rubik, Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(`Score: ${displayScore}`, 20, 40);
+    ctx.fillText(`Score: ${displayScore.toLocaleString()}`, 20, 40);
     
     // Combo display
     const combo = this.comboManager.getCombo();
     if (combo > 0) {
       ctx.fillStyle = '#f59e0b';
-      ctx.font = 'bold 20px Arial';
+      ctx.font = '700 20px Rubik, Arial';
       ctx.fillText(`Combo: ${combo}x`, 20, 65);
     }
     
@@ -868,6 +936,42 @@ export class Game extends GameEngine {
       ctx.font = '16px Arial';
       ctx.textAlign = 'center';
       ctx.fillText('Touch left or right side to move', this.width / 2, this.height - 40);
+    }
+    
+    // Show available power-up button
+    if (this.availablePowerUp) {
+      const powerUpInfo = {
+        rocket: { icon: '🚀', color: '#ef4444' },
+        magnet: { icon: '🧲', color: '#8b5cf6' },
+        slowTime: { icon: '⏱️', color: '#10b981' }
+      };
+      
+      const info = powerUpInfo[this.availablePowerUp];
+      if (info) {
+        // Draw power-up button in bottom right
+        const btnX = this.width - 60;
+        const btnY = this.height - 60;
+        
+        // Button background
+        ctx.fillStyle = info.color;
+        ctx.fillRect(btnX - 30, btnY - 30, 60, 60);
+        
+        // Button border
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(btnX - 30, btnY - 30, 60, 60);
+        
+        // Icon
+        ctx.font = '32px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(info.icon, btnX, btnY + 10);
+        
+        // Instructions
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#333';
+        ctx.fillText('Double tap', btnX, btnY - 40);
+      }
     }
     
   }
@@ -1030,8 +1134,8 @@ export class Game extends GameEngine {
       this.particleManager.createRocketParticles(this.player.x, this.player.y + this.player.height / 2);
     }
     
-    // Shield effect - check for fall protection (activate near bottom of screen)
-    if (this.player && this.player.y > this.camera.y + this.height - 100 && 
+    // Shield effect - check for fall protection (activate closer to bottom of screen)
+    if (this.player && this.player.y > this.camera.y + this.height - 50 && 
         this.player.velocityY > 0 && this.powerUpManager.useShield()) {
       // Bounce player back up
       this.player.velocityY = -800;
