@@ -1,0 +1,17 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjk3NzIzMywidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweGE2N0JhMDI4MTIzMWVCOUUyZWE0Y0Y5Nzg5NGMwYjBiNUI4MDFDYzYifQ",
+    "payload": "eyJkb21haW4iOiJtYXRjaGEtanVtcC5rYXNyYS5jb2RlcyJ9",
+    "signature": "MHhmMWEwYjU4MDQ2M2E3NThjMjA5NTQyODgwZGNmYjAzNmZiZjg0NzFmMTUzNmY3YzFkYWNjZDI4YmEzOWE0YmNhMjE1MTg4OWQxNjU3OGZkYzUzYzlkYzg4MTM5MDVlYjQ3MWUzNmYzOWM4NjlhZTJiMjgyNmQ5NzEzMDE0NTk3MjFj"
+  },
+  "frame": {
+    "version": "1",
+    "name": "Matcha Jump",
+    "iconUrl": "https://cover-art.kasra.codes/matcha_jump_square.png",
+    "homeUrl": "https://matcha-jump.kasra.codes",
+    "imageUrl": "https://cover-art.kasra.codes/matcha_jump_rectangle.png",
+    "buttonTitle": "Jump Now",
+    "splashImageUrl": "https://cover-art.kasra.codes/matcha_jump_square.png",
+    "splashBackgroundColor": "#FFFFFF"
+  }
+}

@@ -1263,10 +1263,12 @@ export class Game extends GameEngine {
         ctx.fillStyle = '#fff';
         ctx.fillText(info.icon, btnX, btnY + 10);
         
-        // Instructions
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#333';
-        ctx.fillText('Double tap', btnX, btnY - 40);
+        // Instructions (don't show for shield since it's automatic)
+        if (currentPowerUp !== 'shield') {
+          ctx.font = '12px Arial';
+          ctx.fillStyle = '#333';
+          ctx.fillText('Double tap', btnX, btnY - 40);
+        }
       }
     }
     
