@@ -389,9 +389,10 @@ export class Game extends GameEngine {
       // Render game objects in view
       for (const obj of this.gameObjects) {
         if (obj.render && this.camera.isInView(obj)) {
-          // Pass shield count to player for glow effect
+          // Pass shield status to player for glow effect
           if (obj === this.player) {
-            obj.render(ctx, this.powerUpInventory.shield);
+            const hasActiveShield = this.availablePowerUp === 'shield';
+            obj.render(ctx, hasActiveShield ? 1 : 0);
           } else {
             obj.render(ctx);
           }
@@ -677,6 +678,47 @@ export class Game extends GameEngine {
       ctx.beginPath();
       ctx.arc(this.width / 2, this.height / 2 + 50, 20, time * 2, time * 2 + Math.PI * 1.5);
       ctx.stroke();
+    } else if (this.paymentState === 'success') {
+      // Success state for main menu
+      ctx.fillStyle = '#10b981';
+      ctx.font = '600 32px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('🎉 CONGRATULATIONS! 🎉', this.width / 2, this.height / 2 - 60);
+      
+      ctx.fillStyle = '#333';
+      ctx.font = '24px Arial';
+      
+      if (this.purchaseSuccessType === 'bundle') {
+        ctx.fillText('You got 3 of each power-up!', this.width / 2, this.height / 2 - 10);
+      } else {
+        const powerUpNames = {
+          rocket: 'Rocket Boost',
+          shield: 'Shield Protection', 
+          magnet: 'Coin Magnet',
+          slowTime: 'Slow Time'
+        };
+        ctx.fillText(`You got 3x ${powerUpNames[this.purchaseSuccessType]}!`, this.width / 2, this.height / 2 - 10);
+      }
+      
+      ctx.fillStyle = '#10b981';
+      ctx.font = '20px Arial';
+      ctx.fillText('Time to show off your new powers!', this.width / 2, this.height / 2 + 30);
+      
+      // Animated sparkles
+      const sparkleTime = Date.now() * 0.005;
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2 + sparkleTime;
+        const radius = 60 + Math.sin(sparkleTime * 2 + i) * 20;
+        const x = this.width / 2 + Math.cos(angle) * radius;
+        const y = this.height / 2 + Math.sin(angle) * radius;
+        
+        ctx.fillStyle = `rgba(16, 185, 129, ${0.6 + Math.sin(sparkleTime * 3 + i) * 0.4})`;
+        ctx.font = '20px Arial';
+        ctx.fillText('✨', x, y);
+      }
+      
+      // Continue button
+      this.drawButton(ctx, this.width / 2, this.height / 2 + 100, 200, 50, 'AWESOME!', '#10b981');
     } else {
       // Power-up options
       const powerUpInfo = [
@@ -687,46 +729,46 @@ export class Game extends GameEngine {
         { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: '0.0015 HYPE', color: '#f59e0b' }
       ];
       
-      let y = 100; // Move down to avoid back button
+      let rowY = 100; // Move down to avoid back button
       
       // Current inventory (bigger)
       ctx.fillStyle = '#333';
       ctx.font = '700 20px Rubik, Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('Current Inventory', this.width / 2, y);
+      ctx.fillText('Current Inventory', this.width / 2, rowY);
       
       ctx.font = '24px Arial';
       const invText = `🚀 ${this.powerUpInventory.rocket}  🛡️ ${this.powerUpInventory.shield}  🧲 ${this.powerUpInventory.magnet}  ⏱️ ${this.powerUpInventory.slowTime}`;
-      ctx.fillText(invText, this.width / 2, y + 35);
+      ctx.fillText(invText, this.width / 2, rowY + 35);
       
-      y += 70;
+      rowY += 70;
       
       for (const info of powerUpInfo) {
         // Power-up row
         ctx.fillStyle = '#f3f4f6';
         ctx.beginPath();
-        ctx.roundRect(this.width / 2 - 160, y, 320, 60, 8);
+        ctx.roundRect(this.width / 2 - 160, rowY, 320, 60, 8);
         ctx.fill();
         
         // Icon
         ctx.font = '28px Arial';
         ctx.textAlign = 'left';
-        ctx.fillText(info.icon, this.width / 2 - 140, y + 38);
+        ctx.fillText(info.icon, this.width / 2 - 140, rowY + 38);
         
         // Name
         ctx.fillStyle = '#333';
         ctx.font = '600 18px Rubik, Arial';
-        ctx.fillText(info.name, this.width / 2 - 100, y + 28);
+        ctx.fillText(info.name, this.width / 2 - 100, rowY + 28);
         
         // Price
         ctx.fillStyle = info.color;
         ctx.font = '700 16px Rubik, Arial';
-        ctx.fillText(info.price, this.width / 2 - 100, y + 48);
+        ctx.fillText(info.price, this.width / 2 - 100, rowY + 48);
         
         // Buy button
-        this.drawButton(ctx, this.width / 2 + 100, y + 30, 60, 35, 'BUY', info.color);
+        this.drawButton(ctx, this.width / 2 + 100, rowY + 30, 60, 35, 'BUY', info.color);
         
-        y += 70;
+        rowY += 70;
       }
       
       // Info text
@@ -936,14 +978,22 @@ export class Game extends GameEngine {
           { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: '0.0015 HYPE', color: '#f59e0b' }
         ];
         
-        let y = 170; // Start y position (adjusted for moved layout)
+        let rowY = 170; // Start y position (adjusted for moved layout)
         for (const info of powerUpInfo) {
           // Buy button position
-          if (this.isPointInButton(x, y, this.width / 2 + 100, y + 30, 60, 35)) {
+          if (this.isPointInButton(x, y, this.width / 2 + 100, rowY + 30, 60, 35)) {
             this.processPowerUpPurchase(info.type);
             return;
           }
-          y += 70;
+          rowY += 70;
+        }
+      } else if (this.paymentState === 'success') {
+        // Success screen button
+        if (this.isPointInButton(x, y, this.width / 2, this.height / 2 + 100, 200, 50)) {
+          this.paymentState = null;
+          this.purchaseSuccessType = null;
+          eventBus.emit(Events.HAPTIC_TRIGGER, 'success');
+          return;
         }
       }
     }
@@ -1113,7 +1163,7 @@ export class Game extends GameEngine {
       this.drawButton(ctx, this.width / 2, 410, 200, 50, 'BACK TO MENU', '#6b7280');
     } else {
       // Continue button (payment)
-      this.drawButton(ctx, this.width / 2, 290, 240, 60, '💳 CONTINUE (0.001 HYPE)', '#f59e0b');
+      this.drawButton(ctx, this.width / 2, 290, 240, 60, 'CONTINUE', '#f59e0b');
       
       // Power-ups button if inventory is low
       let showPowerUpShop = false;
@@ -1264,7 +1314,7 @@ export class Game extends GameEngine {
     }
     
     // Check coin collisions (with magnet effect)
-    const magnetRadius = this.powerUpManager.isActive('magnet') ? 150 : 0;
+    const magnetRadius = this.powerUpManager.isActive('magnet') ? 250 : 0;
     
     for (const coin of this.coins) {
       if (coin.collected) continue;
@@ -1278,8 +1328,8 @@ export class Game extends GameEngine {
       // Magnet attraction
       if (magnetRadius > 0 && distance < magnetRadius) {
         const attraction = 1 - (distance / magnetRadius);
-        coin.x += (this.player.x - coin.x) * attraction * 0.1;
-        coin.y += (this.player.y - coin.y) * attraction * 0.1;
+        coin.x += (this.player.x - coin.x) * attraction * 0.2;
+        coin.y += (this.player.y - coin.y) * attraction * 0.2;
       }
       
       if (playerBounds.right > coinBounds.left &&
@@ -1642,6 +1692,33 @@ export class Game extends GameEngine {
       
       // Close button
       this.drawButton(ctx, this.width / 2, modalY + 410, 160, 40, 'CLOSE', '#6b7280');
+    } else if (this.paymentState === 'success') {
+      // Success state
+      ctx.fillStyle = '#10b981';
+      ctx.font = '600 24px Arial';
+      ctx.fillText('🎉 Purchase Successful! 🎉', this.width / 2, modalY + 200);
+      
+      ctx.fillStyle = '#333';
+      ctx.font = '18px Arial';
+      
+      if (this.purchaseSuccessType === 'bundle') {
+        ctx.fillText('You got 3 of each power-up!', this.width / 2, modalY + 240);
+      } else {
+        const powerUpNames = {
+          rocket: 'Rocket',
+          shield: 'Shield', 
+          magnet: 'Magnet',
+          slowTime: 'Slow Time'
+        };
+        ctx.fillText(`You got 3x ${powerUpNames[this.purchaseSuccessType]}!`, this.width / 2, modalY + 240);
+      }
+      
+      ctx.fillStyle = '#666';
+      ctx.font = '16px Arial';
+      ctx.fillText('Ready to dominate the game!', this.width / 2, modalY + 280);
+      
+      // Continue button
+      this.drawButton(ctx, this.width / 2, modalY + 350, 160, 40, 'AWESOME!', '#10b981');
     } else {
       // Power-up options
       const powerUpInfo = [
@@ -1757,6 +1834,15 @@ export class Game extends GameEngine {
           eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
           return;
         }
+      } else if (this.paymentState === 'success') {
+        // Success screen button
+        if (this.isPointInButton(x, y, this.width / 2, modalY + 350, 160, 40)) {
+          this.paymentModal = null;
+          this.paymentState = null;
+          this.purchaseSuccessType = null;
+          eventBus.emit(Events.HAPTIC_TRIGGER, 'success');
+          return;
+        }
       }
     } else if (this.paymentState === 'error') {
       // Handle error state buttons
@@ -1860,13 +1946,39 @@ export class Game extends GameEngine {
     this.platforms.push(safePlatform);
     this.addGameObject(safePlatform);
     
+    // Make sure player is in game objects
+    if (!this.gameObjects.includes(this.player)) {
+      this.addGameObject(this.player);
+    }
+    
     // Reset player position and velocity
     this.player.x = safeX;
     this.player.y = safeY;
     this.player.velocityY = -600; // Give a small boost
     
-    // Resume game
-    this.start();
+    // Update camera to follow player
+    this.camera.follow(this.player);
+    this.camera.y = this.player.y - this.height / 2;
+    
+    // Generate more platforms above the safe platform
+    for (let i = 1; i <= 15; i++) {
+      const x = Math.random() * (this.width - 70) + 35;
+      const y = safeY + 100 - (i * this.platformSpacing);
+      const platform = new Platform(x, y, 'normal', this.assetLoader);
+      this.platforms.push(platform);
+      this.addGameObject(platform);
+    }
+    
+    // Update platform spawn position
+    this.platformSpawnY = safeY + 100 - (15 * this.platformSpacing);
+    
+    // Re-add particle manager if not present
+    if (!this.gameObjects.includes(this.particleManager)) {
+      this.addGameObject(this.particleManager);
+    }
+    
+    // Resume game engine
+    this.resume();
     eventBus.emit(Events.HAPTIC_TRIGGER, 'success');
   }
   
@@ -1903,10 +2015,19 @@ export class Game extends GameEngine {
         }
       }
       
-      // Close modal and show success
-      this.paymentModal = null;
-      this.paymentState = null;
+      // Show success screen
+      this.paymentState = 'success';
+      this.purchaseSuccessType = type;
       eventBus.emit(Events.HAPTIC_TRIGGER, 'success');
+      
+      // Auto-hide success after 3 seconds
+      setTimeout(() => {
+        if (this.paymentState === 'success') {
+          this.paymentModal = null;
+          this.paymentState = null;
+          this.purchaseSuccessType = null;
+        }
+      }, 3000);
       
     } catch (error) {
       console.error('Power-up purchase failed:', error);

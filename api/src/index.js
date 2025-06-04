@@ -12,7 +12,7 @@ const quickAuthClient = createClient();
 
 // CORS middleware
 app.use('*', cors({
-  origin: ['https://matcha-jump.kasra.codes', 'http://localhost:3000'],
+  origin: ['https://matcha-jump.kasra.codes', 'http://localhost:3000', 'https://kasra.ngrok.app'],
   credentials: true,
   allowMethods: ['GET', 'POST', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization']
@@ -80,7 +80,7 @@ app.post('/api/verify-payment', authMiddleware, async (c) => {
     // Verify transaction on-chain with retries
     const client = getViemClient(c);
     let tx = null;
-    const maxRetries = 3;
+    const maxRetries = 5;
     const retryDelay = 2000; // 2 seconds
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -182,11 +182,17 @@ app.get('/api/powerups/inventory', authMiddleware, async (c) => {
     ).bind(fid).first();
 
     if (!inventory) {
+      // First time user - give them 1 of each power-up as a welcome bonus
+      await c.env.DB.prepare(`
+        INSERT INTO powerup_inventory (fid, rocket, shield, magnet, slow_time)
+        VALUES (?, 1, 1, 1, 1)
+      `).bind(fid).run();
+      
       return c.json({
-        rocket: 0,
-        shield: 0,
-        magnet: 0,
-        slowTime: 0
+        rocket: 1,
+        shield: 1,
+        magnet: 1,
+        slowTime: 1
       });
     }
 

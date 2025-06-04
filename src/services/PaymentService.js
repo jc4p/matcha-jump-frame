@@ -5,6 +5,7 @@ import * as frame from '@farcaster/frame-sdk';
 //   ? 'https://matcha-jump-api.kasra.codes' 
 //   : 'http://localhost:8787';
 const API_BASE_URL = 'https://matcha-jump-api.kasra.codes'
+// const API_BASE_URL = 'https://kasra-api.ngrok.app'
 
 export class PaymentService {
   constructor() {

@@ -8,6 +8,7 @@ BASE_RPC_URL = "https://mainnet.base.org"
 PAYMENT_ADDRESS = "0x0db12C0A67bc5B8942ea3126a465d7a0b23126C7"
 HYPE_TOKEN_ADDRESS = "0x85225Ed797fd4128Ac45A992C46eA4681a7A15dA"
 QUICK_AUTH_DOMAIN = "matcha-jump.kasra.codes"
+# QUICK_AUTH_DOMAIN = "kasra.ngrok.app"
 NODE_ENV = "production"
 
 # D1 Database binding
