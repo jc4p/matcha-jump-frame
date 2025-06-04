@@ -391,7 +391,7 @@ export class Game extends GameEngine {
         if (obj.render && this.camera.isInView(obj)) {
           // Pass shield status to player for glow effect
           if (obj === this.player) {
-            const hasActiveShield = this.availablePowerUp === 'shield';
+            const hasActiveShield = this.powerUpManager.isActive('shield');
             obj.render(ctx, hasActiveShield ? 1 : 0);
           } else {
             obj.render(ctx);
@@ -580,7 +580,7 @@ export class Game extends GameEngine {
     }
     
     // Buy more power-ups button (moved up slightly)
-    this.drawButton(ctx, this.width / 2, 610, 200, 40, '🛍️ BUY POWER-UPS', '#8b5cf6');
+    this.drawButton(ctx, this.width / 2, 610, 200, 40, '🛍️ BUY POWERUPS', '#8b5cf6');
   }
   
   // Helper function to shade colors
@@ -1175,7 +1175,7 @@ export class Game extends GameEngine {
       }
       
       if (showPowerUpShop) {
-        this.drawButton(ctx, this.width / 2, 360, 240, 60, '🛍️ BUY POWER-UPS', '#8b5cf6');
+        this.drawButton(ctx, this.width / 2, 360, 240, 60, '🛍️ BUY POWERUPS', '#8b5cf6');
       }
       
       // Return to menu button
