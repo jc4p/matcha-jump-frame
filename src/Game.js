@@ -4,6 +4,7 @@ import { Camera } from './engine/Camera.js';
 import { Player } from './entities/Player.js';
 import { Platform } from './entities/Platform.js';
 import { eventBus, Events } from './eventBus.js';
+import { AssetLoader } from './utils/AssetLoader.js';
 
 export class Game extends GameEngine {
   constructor(canvas) {
@@ -13,7 +14,7 @@ export class Game extends GameEngine {
     this.platforms = [];
     this.score = 0;
     this.highScore = 0;
-    this.gameState = 'menu';
+    this.gameState = 'loading';
     this.frameContext = null;
     
     this.platformSpawnY = 0;
@@ -21,10 +22,33 @@ export class Game extends GameEngine {
     this.showTouchHint = true;
     this.touchHintTimer = 0;
     
+    this.assetLoader = new AssetLoader();
+    this.assetsLoaded = false;
+    
     this.init();
   }
   
   async init() {
+    // Start loading screen animation
+    this.startLoadingAnimation();
+    
+    // Load all game assets
+    const assetsToLoad = [
+      { key: 'player', src: '/images/player.png' },
+      { key: 'platform_normal', src: '/images/plate_rectangle_1.png' },
+      { key: 'platform_moving', src: '/images/plate_rectangle_2.png' },
+      { key: 'platform_breakable', src: '/images/plate_rectangle_3.png' },
+      { key: 'platform_spring', src: '/images/plate_circle.png' }
+    ];
+    
+    const loadSuccess = await this.assetLoader.loadAll(assetsToLoad);
+    
+    if (!loadSuccess) {
+      console.error('Failed to load some assets, but continuing anyway');
+    }
+    
+    this.assetsLoaded = true;
+    
     try {
       this.frameContext = await frame.sdk.context;
       eventBus.emit(Events.FRAME_AUTH, this.frameContext);
@@ -37,6 +61,16 @@ export class Game extends GameEngine {
     
     frame.sdk.actions.ready();
     eventBus.emit(Events.FRAME_READY);
+  }
+  
+  startLoadingAnimation() {
+    const animate = () => {
+      if (this.gameState === 'loading') {
+        this.renderLoading();
+        requestAnimationFrame(animate);
+      }
+    };
+    animate();
   }
   
   setupGameEventListeners() {
@@ -97,7 +131,7 @@ export class Game extends GameEngine {
     
     // Create player on the first platform
     const firstPlatform = this.platforms[0];
-    this.player = new Player(firstPlatform.x, firstPlatform.y - 40);
+    this.player = new Player(firstPlatform.x, firstPlatform.y - 40, this.assetLoader);
     this.addGameObject(this.player);
     
     // Give small initial jump to start the game
@@ -122,7 +156,7 @@ export class Game extends GameEngine {
     for (let i = 0; i < 10; i++) {
       const x = Math.random() * (this.width - 70) + 35;
       const y = startY - (i * this.platformSpacing);
-      const platform = new Platform(x, y, 'normal');
+      const platform = new Platform(x, y, 'normal', this.assetLoader);
       this.platforms.push(platform);
       this.addGameObject(platform);
     }
@@ -175,7 +209,9 @@ export class Game extends GameEngine {
     ctx.fillStyle = '#87CEEB';
     ctx.fillRect(0, 0, this.width, this.height);
     
-    if (this.gameState === 'menu') {
+    if (this.gameState === 'loading') {
+      this.renderLoading();
+    } else if (this.gameState === 'menu') {
       this.renderMenu(ctx);
     } else if (this.gameState === 'gameOver') {
       this.renderGameOver(ctx);
@@ -196,6 +232,39 @@ export class Game extends GameEngine {
       // Render UI
       this.renderUI(ctx);
     }
+  }
+  
+  renderLoading() {
+    const ctx = this.ctx;
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Matcha Jump', this.width / 2, this.height / 3);
+    
+    // Loading bar
+    const barWidth = 300;
+    const barHeight = 20;
+    const barX = (this.width - barWidth) / 2;
+    const barY = this.height / 2;
+    
+    // Background
+    ctx.fillStyle = '#ddd';
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+    
+    // Progress
+    const progress = this.assetLoader.getProgress();
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(barX, barY, barWidth * progress, barHeight);
+    
+    // Border
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(barX, barY, barWidth, barHeight);
+    
+    // Loading text
+    ctx.font = '20px Arial';
+    ctx.fillStyle = '#333';
+    ctx.fillText('Loading assets...', this.width / 2, barY + 50);
   }
   
   renderMenu(ctx) {
@@ -297,7 +366,7 @@ export class Game extends GameEngine {
         type = 'spring';
       }
       
-      const platform = new Platform(x, y, type);
+      const platform = new Platform(x, y, type, this.assetLoader);
       this.platforms.push(platform);
       this.addGameObject(platform);
       

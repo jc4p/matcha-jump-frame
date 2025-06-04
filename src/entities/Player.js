@@ -1,7 +1,7 @@
 import { eventBus, Events } from '../eventBus.js';
 
 export class Player {
-  constructor(x, y) {
+  constructor(x, y, assetLoader) {
     this.x = x;
     this.y = y;
     this.width = 40;
@@ -12,8 +12,8 @@ export class Player {
     this.jumpPower = -500;
     this.moveSpeed = 300;
     this.isJumping = false;
-    this.image = new Image();
-    this.image.src = '/images/player.png';
+    this.assetLoader = assetLoader;
+    this.image = this.assetLoader.get('player');
     
     // Animation properties
     this.scaleX = 1;
@@ -184,16 +184,7 @@ export class Player {
     ctx.rotate(this.rotation);
     ctx.scale(this.scaleX, this.scaleY);
     
-    // Add subtle shadow when jumping
-    if (this.isJumping && this.velocityY < 0) {
-      ctx.globalAlpha = 0.3;
-      ctx.fillStyle = '#000';
-      ctx.ellipse(0, this.height / 2 + 5, this.width / 2 * 0.8, 3, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-    
-    if (this.image.complete) {
+    if (this.image && this.image.complete) {
       ctx.drawImage(
         this.image,
         -this.width / 2,
@@ -202,6 +193,7 @@ export class Player {
         this.height
       );
     } else {
+      // Fallback if image not loaded
       ctx.fillStyle = '#4a5568';
       ctx.fillRect(
         -this.width / 2,

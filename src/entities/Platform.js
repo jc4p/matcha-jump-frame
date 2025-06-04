@@ -1,25 +1,21 @@
 import { eventBus, Events } from '../eventBus.js';
 
 export class Platform {
-  constructor(x, y, type = 'normal') {
+  constructor(x, y, type = 'normal', assetLoader) {
     this.x = x;
     this.y = y;
     this.width = 70;
     this.height = 15;
     this.type = type;
     this.isDestroyed = false;
+    this.assetLoader = assetLoader;
     
     this.images = {
-      normal: new Image(),
-      moving: new Image(),
-      breakable: new Image(),
-      spring: new Image()
+      normal: this.assetLoader ? this.assetLoader.get('platform_normal') : null,
+      moving: this.assetLoader ? this.assetLoader.get('platform_moving') : null,
+      breakable: this.assetLoader ? this.assetLoader.get('platform_breakable') : null,
+      spring: this.assetLoader ? this.assetLoader.get('platform_spring') : null
     };
-    
-    this.images.normal.src = '/images/plate_rectangle_1.png';
-    this.images.moving.src = '/images/plate_rectangle_2.png';
-    this.images.breakable.src = '/images/plate_rectangle_3.png';
-    this.images.spring.src = '/images/plate_circle.png';
     
     if (type === 'moving') {
       this.velocityX = 100;
