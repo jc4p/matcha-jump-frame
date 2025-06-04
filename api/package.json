@@ -1,0 +1,23 @@
+{
+	"name": "matcha-jump-api",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"test": "vitest"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.8.19",
+		"vitest": "~3.0.7",
+		"wrangler": "^4.19.1"
+	},
+	"dependencies": {
+		"@farcaster/quick-auth": "^0.0.6",
+		"cors": "^2.8.5",
+		"hono": "^4.7.11",
+		"uuid": "^11.1.0",
+		"viem": "^2.30.6"
+	}
+}

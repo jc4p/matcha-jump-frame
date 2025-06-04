@@ -71,6 +71,12 @@ export class Game extends GameEngine {
     this.paymentState = null; // null, 'processing', 'verifying'
     this.paymentModal = null; // 'continue', 'powerups'
     
+    // Game session tracking
+    this.gameSessionId = null;
+    this.gameStartTime = null;
+    this.powerUpsUsedThisGame = {};
+    this.coinsCollectedThisGame = 0;
+    
     this.init();
   }
   
@@ -165,6 +171,7 @@ export class Game extends GameEngine {
       const multiplier = this.powerUpManager.getScoreMultiplier();
       const comboMultiplier = this.comboManager.getMultiplier();
       this.score += coin.value * multiplier * comboMultiplier;
+      this.coinsCollectedThisGame++;
       hapticsService.collectCoin();
     });
     
@@ -191,11 +198,21 @@ export class Game extends GameEngine {
     
   }
   
-  showMenu() {
+  async showMenu() {
     this.gameState = 'menu';
     this.menuState = 'main';
     this.selectedPowerUp = null;
     this.isRunning = false;
+    
+    // Load inventory from backend
+    try {
+      const inventory = await paymentService.getInventory();
+      this.powerUpInventory = inventory;
+    } catch (error) {
+      console.error('Failed to load inventory:', error);
+      // Use existing inventory if backend fails
+    }
+    
     this.startMenuAnimation();
   }
   
@@ -209,13 +226,32 @@ export class Game extends GameEngine {
     animate();
   }
   
-  startGame() {
+  async startGame() {
     this.gameState = 'playing';
     this.score = 0;
     this.baseHeightScore = 0;
     this.showTouchHint = true;
     this.touchHintTimer = 3; // Show hint for 3 seconds
     // Don't reset availablePowerUp here - it's set in startGameWithPowerUp
+    
+    // Reset game stats tracking
+    this.gameStartTime = Date.now();
+    this.powerUpsUsedThisGame = {};
+    this.coinsCollectedThisGame = 0;
+    
+    // Start game session with backend
+    try {
+      const session = await paymentService.startGameSession();
+      this.gameSessionId = session.sessionId;
+      
+      // Update inventory from backend
+      if (session.inventory) {
+        this.powerUpInventory = session.inventory;
+      }
+    } catch (error) {
+      console.error('Failed to start game session:', error);
+      // Continue without session tracking in case of error
+    }
     
     // Clear existing game objects
     this.gameObjects = [];
@@ -932,8 +968,23 @@ export class Game extends GameEngine {
     
     // Only auto-activate shield
     if (this.selectedPowerUp === 'shield') {
-      setTimeout(() => {
+      setTimeout(async () => {
         if (this.gameState === 'playing') {
+          // Track shield usage
+          if (!this.powerUpsUsedThisGame['shield']) {
+            this.powerUpsUsedThisGame['shield'] = 0;
+          }
+          this.powerUpsUsedThisGame['shield']++;
+          
+          // Notify backend of shield usage
+          if (this.gameSessionId) {
+            try {
+              await paymentService.usePowerUp('shield', this.gameSessionId);
+            } catch (error) {
+              console.error('Failed to track shield usage:', error);
+            }
+          }
+          
           const powerUpInfo = {
             type: 'shield',
             properties: { icon: '🛡️', name: 'Shield', color: '#3b82f6', duration: 0 }
@@ -945,7 +996,7 @@ export class Game extends GameEngine {
     }
   }
   
-  usePowerUp() {
+  async usePowerUp() {
     if (!this.availablePowerUp || this.gameState !== 'playing') return;
     
     // Don't allow using if already active
@@ -959,12 +1010,28 @@ export class Game extends GameEngine {
     
     const powerUpInfo = powerUpTypes[this.availablePowerUp];
     if (powerUpInfo) {
+      // Track power-up usage
+      const powerUpType = this.availablePowerUp;
+      if (!this.powerUpsUsedThisGame[powerUpType]) {
+        this.powerUpsUsedThisGame[powerUpType] = 0;
+      }
+      this.powerUpsUsedThisGame[powerUpType]++;
+      
+      // Notify backend of power-up usage
+      if (this.gameSessionId) {
+        try {
+          await paymentService.usePowerUp(powerUpType, this.gameSessionId);
+        } catch (error) {
+          console.error('Failed to track power-up usage:', error);
+        }
+      }
+      
       this.powerUpManager.activatePowerUp({
-        type: this.availablePowerUp,
+        type: powerUpType,
         properties: powerUpInfo
       });
       this.availablePowerUp = null; // Power-up is consumed
-      eventBus.emit(Events.POWERUP_USE, this.availablePowerUp);
+      eventBus.emit(Events.POWERUP_USE, powerUpType);
       eventBus.emit(Events.HAPTIC_TRIGGER, 'success');
     }
   }
@@ -1309,13 +1376,28 @@ export class Game extends GameEngine {
     }
   }
   
-  gameOver() {
+  async gameOver() {
     this.gameState = 'gameOver';
     this.pause();
     this.paymentModal = null;
     this.paymentState = null;
     eventBus.emit(Events.GAME_OVER);
     eventBus.emit(Events.HAPTIC_TRIGGER, 'heavy');
+    
+    // End game session
+    if (this.gameSessionId) {
+      try {
+        await paymentService.endGameSession(this.gameSessionId, {
+          score: this.baseHeightScore + this.score,
+          height: Math.abs(this.camera.y),
+          powerupsUsed: this.powerUpsUsedThisGame,
+          coinsCollected: this.coinsCollectedThisGame
+        });
+      } catch (error) {
+        console.error('Failed to end game session:', error);
+      }
+    }
+    
     this.startGameOverAnimation();
   }
   
@@ -1665,16 +1747,23 @@ export class Game extends GameEngine {
       // Wait for verification
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Success! Add power-ups to inventory
-      if (type === 'bundle') {
-        // Add 3 of each power-up
-        this.powerUpInventory.rocket += 3;
-        this.powerUpInventory.shield += 3;
-        this.powerUpInventory.magnet += 3;
-        this.powerUpInventory.slowTime += 3;
-      } else {
-        // Add 3 of the selected power-up
-        this.powerUpInventory[type] += 3;
+      // Success! Reload inventory from backend to ensure sync
+      try {
+        const inventory = await paymentService.getInventory();
+        this.powerUpInventory = inventory;
+      } catch (error) {
+        console.error('Failed to reload inventory:', error);
+        // Fallback to local update if backend fails
+        if (type === 'bundle') {
+          // Add 3 of each power-up
+          this.powerUpInventory.rocket += 3;
+          this.powerUpInventory.shield += 3;
+          this.powerUpInventory.magnet += 3;
+          this.powerUpInventory.slowTime += 3;
+        } else {
+          // Add 3 of the selected power-up
+          this.powerUpInventory[type] += 3;
+        }
       }
       
       // Close modal and show success
