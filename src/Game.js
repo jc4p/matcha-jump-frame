@@ -391,7 +391,7 @@ export class Game extends GameEngine {
         if (obj.render && this.camera.isInView(obj)) {
           // Pass shield status to player for glow effect
           if (obj === this.player) {
-            const hasActiveShield = this.powerUpManager.isActive('shield');
+            const hasActiveShield = this.availablePowerUp === 'shield';
             obj.render(ctx, hasActiveShield ? 1 : 0);
           } else {
             obj.render(ctx);
@@ -1021,34 +1021,7 @@ export class Game extends GameEngine {
     
     this.startGame();
     
-    // Only auto-activate shield
-    if (this.selectedPowerUp === 'shield') {
-      setTimeout(async () => {
-        if (this.gameState === 'playing') {
-          // Track shield usage
-          if (!this.powerUpsUsedThisGame['shield']) {
-            this.powerUpsUsedThisGame['shield'] = 0;
-          }
-          this.powerUpsUsedThisGame['shield']++;
-          
-          // Notify backend of shield usage
-          if (this.gameSessionId) {
-            try {
-              await paymentService.usePowerUp('shield', this.gameSessionId);
-            } catch (error) {
-              console.error('Failed to track shield usage:', error);
-            }
-          }
-          
-          const powerUpInfo = {
-            type: 'shield',
-            properties: { icon: '🛡️', name: 'Shield', color: '#3b82f6', duration: 0 }
-          };
-          this.powerUpManager.activatePowerUp(powerUpInfo);
-          this.availablePowerUp = null; // Shield is used immediately
-        }
-      }, 100);
-    }
+    // Shield is not auto-activated, player can activate it manually like other power-ups
   }
   
   async usePowerUp() {
@@ -1437,7 +1410,26 @@ export class Game extends GameEngine {
     
     // Shield effect - check for fall protection (activate closer to bottom of screen)
     if (this.player && this.player.y > this.camera.y + this.height - 50 && 
-        this.player.velocityY > 0 && this.powerUpManager.useShield()) {
+        this.player.velocityY > 0 && this.availablePowerUp === 'shield') {
+      
+      // Track shield usage
+      if (!this.powerUpsUsedThisGame['shield']) {
+        this.powerUpsUsedThisGame['shield'] = 0;
+      }
+      this.powerUpsUsedThisGame['shield']++;
+      
+      // Notify backend of shield usage
+      if (this.gameSessionId) {
+        try {
+          paymentService.usePowerUp('shield', this.gameSessionId);
+        } catch (error) {
+          console.error('Failed to track shield usage:', error);
+        }
+      }
+      
+      // Consume the shield
+      this.availablePowerUp = null;
+      
       // Bounce player back up
       this.player.velocityY = -800;
       this.player.jump(-800);
