@@ -11,12 +11,21 @@ export const Events = {
   PLAYER_JUMP: 'player:jump',
   PLAYER_LAND: 'player:land',
   PLAYER_FALL: 'player:fall',
+  PLAYER_SPRING: 'player:spring',
   
   PLATFORM_SPAWN: 'platform:spawn',
   PLATFORM_DESTROY: 'platform:destroy',
   
   POWERUP_SPAWN: 'powerup:spawn',
   POWERUP_COLLECT: 'powerup:collect',
+  POWERUP_ACTIVATE: 'powerup:activate',
+  POWERUP_EXPIRE: 'powerup:expire',
+  
+  COIN_COLLECTED: 'coin:collected',
+  
+  COMBO_INCREMENT: 'combo:increment',
+  COMBO_BREAK: 'combo:break',
+  COMBO_MILESTONE: 'combo:milestone',
   
   SCORE_UPDATE: 'score:update',
   HIGH_SCORE: 'score:high',

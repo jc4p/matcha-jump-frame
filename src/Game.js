@@ -3,8 +3,14 @@ import { GameEngine } from './engine/GameEngine.js';
 import { Camera } from './engine/Camera.js';
 import { Player } from './entities/Player.js';
 import { Platform } from './entities/Platform.js';
+import { Coin } from './entities/Coin.js';
+import { PowerUp } from './entities/PowerUp.js';
 import { eventBus, Events } from './eventBus.js';
 import { AssetLoader } from './utils/AssetLoader.js';
+import { ParticleManager } from './managers/ParticleManager.js';
+import { AudioManager } from './managers/AudioManager.js';
+import { PowerUpManager } from './managers/PowerUpManager.js';
+import { ComboManager } from './managers/ComboManager.js';
 
 export class Game extends GameEngine {
   constructor(canvas) {
@@ -12,8 +18,10 @@ export class Game extends GameEngine {
     this.camera = new Camera(window.innerWidth, window.innerHeight);
     this.player = null;
     this.platforms = [];
+    this.coins = [];
+    this.powerUps = [];
     this.score = 0;
-    this.highScore = 0;
+    this.highScore = this.loadHighScore();
     this.gameState = 'loading';
     this.frameContext = null;
     
@@ -24,6 +32,10 @@ export class Game extends GameEngine {
     
     this.assetLoader = new AssetLoader();
     this.assetsLoaded = false;
+    this.particleManager = new ParticleManager();
+    this.audioManager = new AudioManager();
+    this.powerUpManager = new PowerUpManager();
+    this.comboManager = new ComboManager();
     
     this.init();
   }
@@ -75,12 +87,18 @@ export class Game extends GameEngine {
   
   setupGameEventListeners() {
     this.canvas.addEventListener('click', () => {
+      // Resume audio context on user interaction
+      this.audioManager.resumeContext();
+      
       if (this.gameState === 'menu' || this.gameState === 'gameOver') {
         this.startGame();
       }
     });
     
     this.canvas.addEventListener('touchstart', (e) => {
+      // Resume audio context on user interaction
+      this.audioManager.resumeContext();
+      
       if (this.gameState === 'menu' || this.gameState === 'gameOver') {
         e.preventDefault();
         this.startGame();
@@ -91,7 +109,31 @@ export class Game extends GameEngine {
       this.score = score;
       if (score > this.highScore) {
         this.highScore = score;
+        this.saveHighScore(score);
         eventBus.emit(Events.HIGH_SCORE, this.highScore);
+      }
+    });
+    
+    eventBus.on(Events.COIN_COLLECTED, (coin) => {
+      const multiplier = this.powerUpManager.getScoreMultiplier();
+      this.score += coin.value * multiplier;
+      eventBus.emit(Events.SCORE_UPDATE, this.score);
+      // Add particle effect for coin collection
+      this.particleManager.createCoinParticles(coin.x, coin.y);
+    });
+    
+    // Combo events
+    eventBus.on(Events.COMBO_MILESTONE, (data) => {
+      // Add special effects for combo milestones
+      if (this.player) {
+        this.particleManager.createComboParticles(this.player.x, this.player.y);
+      }
+    });
+    
+    // Update score from combo bonuses
+    eventBus.on(Events.SCORE_UPDATE, (points) => {
+      if (typeof points === 'number' && !isNaN(points)) {
+        this.score += points;
       }
     });
     
@@ -125,6 +167,15 @@ export class Game extends GameEngine {
     // Clear existing game objects
     this.gameObjects = [];
     this.platforms = [];
+    this.coins = [];
+    this.powerUps = [];
+    
+    // Clear power-ups and combo
+    this.powerUpManager.clearAllPowerUps();
+    this.comboManager.reset();
+    
+    // Add particle manager to game objects
+    this.addGameObject(this.particleManager);
     
     // Create initial platforms first
     this.createInitialPlatforms();
@@ -172,6 +223,9 @@ export class Game extends GameEngine {
       // Update camera
       this.camera.update();
       
+      // Update combo manager
+      this.comboManager.update(deltaTime);
+      
       // Update touch hint timer
       if (this.touchHintTimer > 0) {
         this.touchHintTimer -= deltaTime;
@@ -184,6 +238,9 @@ export class Game extends GameEngine {
       this.checkCollisions();
       this.spawnPlatforms();
       this.cleanupPlatforms();
+      this.cleanupCoins();
+      this.cleanupPowerUps();
+      this.handlePowerUpEffects();
       
       // Check if player fell below the camera view
       if (this.player) {
@@ -193,9 +250,12 @@ export class Game extends GameEngine {
         }
       }
       
-      // Update score
-      const currentScore = Math.max(0, Math.floor(-this.camera.y / 10));
+      // Update score with multiplier
+      const multiplier = this.powerUpManager.getScoreMultiplier();
+      const baseScore = Math.max(0, Math.floor(-this.camera.y / 10));
+      const currentScore = baseScore * multiplier;
       if (currentScore > this.score) {
+        this.score = currentScore;
         eventBus.emit(Events.SCORE_UPDATE, currentScore);
       }
     }
@@ -305,6 +365,33 @@ export class Game extends GameEngine {
     ctx.textAlign = 'left';
     ctx.fillText(`Score: ${this.score}`, 20, 40);
     
+    // Combo display
+    const combo = this.comboManager.getCombo();
+    if (combo > 0) {
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 20px Arial';
+      ctx.fillText(`Combo: ${combo}x`, 20, 65);
+    }
+    
+    // Active power-ups
+    const activePowerUps = this.powerUpManager.getActivePowerUps();
+    let powerUpY = combo > 0 ? 95 : 70;
+    
+    for (const powerUp of activePowerUps) {
+      ctx.fillStyle = powerUp.properties.color;
+      ctx.font = 'bold 18px Arial';
+      ctx.textAlign = 'left';
+      
+      let text = `${powerUp.properties.icon} ${powerUp.properties.name}`;
+      if (powerUp.remainingTime > 0) {
+        const seconds = Math.ceil(powerUp.remainingTime / 1000);
+        text += ` (${seconds}s)`;
+      }
+      
+      ctx.fillText(text, 20, powerUpY);
+      powerUpY += 25;
+    }
+    
     // Mobile touch controls hint - just text that fades out
     if ('ontouchstart' in window && this.showTouchHint) {
       const alpha = Math.min(1, this.touchHintTimer);
@@ -318,35 +405,81 @@ export class Game extends GameEngine {
   }
   
   checkCollisions() {
-    if (!this.player || this.player.velocityY <= 0) return;
+    if (!this.player) return;
     
     const playerBounds = this.player.getBounds();
     
-    for (const platform of this.platforms) {
-      if (platform.isDestroyed) continue;
-      
-      const platformBounds = platform.getBounds();
-      
-      if (playerBounds.bottom > platformBounds.top &&
-          playerBounds.bottom < platformBounds.bottom &&
-          playerBounds.right > platformBounds.left &&
-          playerBounds.left < platformBounds.right) {
+    // Check platform collisions
+    if (this.player.velocityY > 0) {
+      for (const platform of this.platforms) {
+        if (platform.isDestroyed) continue;
         
-        this.player.y = platformBounds.top - this.player.height / 2;
+        const platformBounds = platform.getBounds();
         
-        // Spring platforms give super jump
-        if (platform.type === 'spring') {
-          this.player.jump(-800); // Super jump!
-          eventBus.emit(Events.HAPTIC_TRIGGER, 'heavy');
-        } else {
-          this.player.jump();
+        if (playerBounds.bottom > platformBounds.top &&
+            playerBounds.bottom < platformBounds.bottom &&
+            playerBounds.right > platformBounds.left &&
+            playerBounds.left < platformBounds.right) {
+          
+          this.player.y = platformBounds.top - this.player.height / 2;
+          
+          // Spring platforms give super jump
+          if (platform.type === 'spring') {
+            this.player.jump(-800); // Super jump!
+            eventBus.emit(Events.HAPTIC_TRIGGER, 'heavy');
+            eventBus.emit(Events.PLAYER_SPRING);
+          } else {
+            this.player.jump();
+            eventBus.emit(Events.HAPTIC_TRIGGER, 'light');
+          }
+          
+          this.player.land();
+          platform.onPlayerLand();
+          break;
         }
+      }
+    }
+    
+    // Check coin collisions (with magnet effect)
+    const magnetRadius = this.powerUpManager.isActive('magnet') ? 150 : 0;
+    
+    for (const coin of this.coins) {
+      if (coin.collected) continue;
+      
+      const coinBounds = coin.getBounds();
+      const distance = Math.sqrt(
+        Math.pow(this.player.x - coin.x, 2) + 
+        Math.pow(this.player.y - coin.y, 2)
+      );
+      
+      // Magnet attraction
+      if (magnetRadius > 0 && distance < magnetRadius) {
+        const attraction = 1 - (distance / magnetRadius);
+        coin.x += (this.player.x - coin.x) * attraction * 0.1;
+        coin.y += (this.player.y - coin.y) * attraction * 0.1;
+      }
+      
+      if (playerBounds.right > coinBounds.left &&
+          playerBounds.left < coinBounds.right &&
+          playerBounds.bottom > coinBounds.top &&
+          playerBounds.top < coinBounds.bottom) {
         
-        this.player.land();
-        platform.onPlayerLand();
+        coin.collect();
+      }
+    }
+    
+    // Check power-up collisions
+    for (const powerUp of this.powerUps) {
+      if (powerUp.collected) continue;
+      
+      const powerUpBounds = powerUp.getBounds();
+      
+      if (playerBounds.right > powerUpBounds.left &&
+          playerBounds.left < powerUpBounds.right &&
+          playerBounds.bottom > powerUpBounds.top &&
+          playerBounds.top < powerUpBounds.bottom) {
         
-        eventBus.emit(Events.HAPTIC_TRIGGER, 'light');
-        break;
+        powerUp.collect();
       }
     }
   }
@@ -370,6 +503,22 @@ export class Game extends GameEngine {
       this.platforms.push(platform);
       this.addGameObject(platform);
       
+      // Randomly spawn coins on platforms (20% chance)
+      if (Math.random() < 0.2 && type !== 'breakable') {
+        const coin = new Coin(x, y - 30);
+        this.coins.push(coin);
+        this.addGameObject(coin);
+      }
+      
+      // Randomly spawn power-ups (5% chance)
+      if (Math.random() < 0.05 && type !== 'breakable') {
+        const powerUpTypes = ['rocket', 'shield', 'magnet', 'scoreBoost'];
+        const randomType = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+        const powerUp = new PowerUp(x, y - 50, randomType);
+        this.powerUps.push(powerUp);
+        this.addGameObject(powerUp);
+      }
+      
       this.platformSpawnY -= this.platformSpacing;
     }
   }
@@ -384,10 +533,70 @@ export class Game extends GameEngine {
     });
   }
   
+  cleanupCoins() {
+    this.coins = this.coins.filter(coin => {
+      if (coin.y > this.camera.y + this.height + 100 || coin.collected) {
+        this.removeGameObject(coin);
+        return false;
+      }
+      return true;
+    });
+  }
+  
+  cleanupPowerUps() {
+    this.powerUps = this.powerUps.filter(powerUp => {
+      if (powerUp.y > this.camera.y + this.height + 100 || powerUp.collected) {
+        this.removeGameObject(powerUp);
+        return false;
+      }
+      return true;
+    });
+  }
+  
+  handlePowerUpEffects() {
+    // Rocket boost effect
+    if (this.powerUpManager.isActive('rocket') && this.player) {
+      this.player.velocityY = Math.min(this.player.velocityY, -600);
+      
+      // Add rocket particles
+      this.particleManager.createRocketParticles(this.player.x, this.player.y + this.player.height / 2);
+    }
+    
+    // Shield effect - check for fall protection
+    if (this.player && this.player.y > this.camera.y + this.height / 2 && 
+        this.player.velocityY > 0 && this.powerUpManager.useShield()) {
+      // Bounce player back up
+      this.player.velocityY = -800;
+      this.player.jump(-800);
+      eventBus.emit(Events.HAPTIC_TRIGGER, 'heavy');
+      
+      // Shield break effect
+      this.particleManager.createShieldBreakParticles(this.player.x, this.player.y);
+    }
+  }
+  
   gameOver() {
     this.gameState = 'gameOver';
     this.pause();
     eventBus.emit(Events.GAME_OVER);
     eventBus.emit(Events.HAPTIC_TRIGGER, 'heavy');
+  }
+  
+  loadHighScore() {
+    try {
+      const saved = localStorage.getItem('matchaJumpHighScore');
+      return saved ? parseInt(saved) : 0;
+    } catch (e) {
+      console.error('Failed to load high score:', e);
+      return 0;
+    }
+  }
+  
+  saveHighScore(score) {
+    try {
+      localStorage.setItem('matchaJumpHighScore', score.toString());
+    } catch (e) {
+      console.error('Failed to save high score:', e);
+    }
   }
 }

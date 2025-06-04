@@ -99,7 +99,7 @@ export class Player {
       this.targetScaleY = 1.4;
     }
     
-    eventBus.emit(Events.PLAYER_JUMP);
+    eventBus.emit(Events.PLAYER_JUMP, this);
   }
   
   land() {
@@ -110,7 +110,7 @@ export class Player {
     this.targetScaleX = 1.5;
     this.targetScaleY = 0.5;
     
-    eventBus.emit(Events.PLAYER_LAND);
+    eventBus.emit(Events.PLAYER_LAND, this);
   }
   
   update(deltaTime) {
