@@ -42,9 +42,41 @@ export class PaymentService {
     return '0x' + wei;
   }
 
+  // Ensure we're connected to the correct network (chain ID 999)
+  async ensureCorrectNetwork() {
+    try {
+      // Check current chain ID
+      const chainId = await frame.sdk.wallet.ethProvider.request({
+        method: 'eth_chainId'
+      });
+      
+      const chainIdDecimal = typeof chainId === 'number' ? chainId : parseInt(chainId, 16);
+      
+      if (chainIdDecimal !== 999) {
+        console.log(`Switching from chain ${chainIdDecimal} to chain 999...`);
+        
+        // Switch to chain ID 999 (0x3e7 in hex)
+        await frame.sdk.wallet.ethProvider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x3e7' }]
+        });
+        
+        console.log('Successfully switched to chain 999');
+      } else {
+        console.log('Already connected to chain 999');
+      }
+    } catch (error) {
+      console.error('Failed to switch network:', error);
+      throw new Error('Failed to switch to the required network (chain ID 999)');
+    }
+  }
+
   // Make a payment through Frame SDK
   async makePayment(amount, description) {
     try {
+      // Ensure we're on the correct network before making any calls
+      await this.ensureCorrectNetwork();
+      
       // Get user's wallet address
       const accounts = await frame.sdk.wallet.ethProvider.request({
         method: 'eth_requestAccounts'
