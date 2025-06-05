@@ -15,6 +15,19 @@ export class HapticsService {
   }
   
   async init() {
+    // Check if haptics should be disabled for specific client
+    try {
+      const context = await frame.sdk.context;
+      const clientFid = context.client?.clientFid;
+      if (clientFid === 399519) {
+        this.hapticsDisabled = true;
+        console.log('Haptics disabled for clientFid 399519');
+        return
+      }
+    } catch (e) {
+      // Context not available
+    }
+
     // Check for Frame SDK haptics support
     try {
       const capabilities = await frame.sdk.getCapabilities();
@@ -25,18 +38,6 @@ export class HapticsService {
         notification: capabilities.includes('haptics.notificationOccurred'),
         selection: capabilities.includes('haptics.selectionChanged')
       };
-      
-      // Check if haptics should be disabled for specific client
-      try {
-        const context = await frame.sdk.context;
-        const clientFid = context.client?.clientFid;
-        if (clientFid === 399519) {
-          this.hapticsDisabled = true;
-          console.log('Haptics disabled for clientFid 399519');
-        }
-      } catch (e) {
-        // Context not available
-      }
     } catch (e) {
       // Not in Frame environment
       this.isFrameEnvironment = false;
