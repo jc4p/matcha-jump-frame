@@ -9,6 +9,7 @@ export class HapticsService {
       notification: false,
       selection: false
     };
+    this.hapticsDisabled = false;
     
     this.init();
   }
@@ -24,6 +25,18 @@ export class HapticsService {
         notification: capabilities.includes('haptics.notificationOccurred'),
         selection: capabilities.includes('haptics.selectionChanged')
       };
+      
+      // Check if haptics should be disabled for specific client
+      try {
+        const context = await frame.sdk.context;
+        const clientFid = context.client?.clientFid;
+        if (clientFid === 399519) {
+          this.hapticsDisabled = true;
+          console.log('Haptics disabled for clientFid 399519');
+        }
+      } catch (e) {
+        // Context not available
+      }
     } catch (e) {
       // Not in Frame environment
       this.isFrameEnvironment = false;
@@ -34,6 +47,9 @@ export class HapticsService {
   }
   
   async trigger(type, intensity = 'medium') {
+    // Skip if haptics are disabled
+    if (this.hapticsDisabled) return;
+    
     // Try Frame SDK haptics first
     if (this.isFrameEnvironment) {
       try {
@@ -77,7 +93,7 @@ export class HapticsService {
   }
   
   vibratePattern(type) {
-    if (!this.vibrationSupported) return;
+    if (!this.vibrationSupported || this.hapticsDisabled) return;
     
     // Define vibration patterns for different feedback types
     const patterns = {
@@ -151,7 +167,7 @@ export class HapticsService {
   
   // Check if any haptics are available
   isAvailable() {
-    return this.isFrameEnvironment || this.vibrationSupported;
+    return !this.hapticsDisabled && (this.isFrameEnvironment || this.vibrationSupported);
   }
 }
 

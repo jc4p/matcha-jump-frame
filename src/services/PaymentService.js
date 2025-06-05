@@ -12,6 +12,9 @@ export class PaymentService {
     this.paymentAddress = '0x0db12C0A67bc5B8942ea3126a465d7a0b23126C7'; // Replace with your payment address
     this.authToken = null;
     this.tokenExpiry = null;
+    this.paymentsDisabled = false;
+    
+    this.checkClientFid();
   }
 
   // Get auth token using Quick Auth
@@ -74,6 +77,13 @@ export class PaymentService {
   // Make a payment through Frame SDK
   async makePayment(amount, description) {
     try {
+      // Skip if payments are disabled
+      if (this.paymentsDisabled) {
+        console.log('Payment skipped - disabled for this client');
+        // Return a mock transaction hash
+        return '0x' + Math.random().toString(16).substr(2, 64);
+      }
+      
       // Ensure we're on the correct network before making any calls
       await this.ensureCorrectNetwork();
       
@@ -171,6 +181,20 @@ export class PaymentService {
 
   // Pay to continue playing
   async payContinue(currentScore, currentHeight) {
+    // If payments disabled, return success without payment
+    if (this.paymentsDisabled) {
+      console.log('Continue payment skipped - disabled for this client');
+      return {
+        success: true,
+        verified: true,
+        data: {
+          type: 'continue',
+          score: currentScore,
+          height: currentHeight
+        }
+      };
+    }
+    
     const amount = 0.001; // 0.001 HYPE
     const txHash = await this.makePayment(amount, 'Continue playing Matcha Jump');
     
@@ -184,6 +208,20 @@ export class PaymentService {
 
   // Purchase power-ups
   async purchasePowerUps(powerUpType, quantity = 1) {
+    // If payments disabled, return success without payment
+    if (this.paymentsDisabled) {
+      console.log('Power-up purchase skipped - disabled for this client');
+      return {
+        success: true,
+        verified: true,
+        data: {
+          type: 'powerup',
+          powerUpType,
+          quantity
+        }
+      };
+    }
+    
     const prices = {
       rocket: 0.0005,
       shield: 0.0005,
@@ -218,6 +256,20 @@ export class PaymentService {
         bundle: 0.0015
       }
     };
+  }
+  
+  // Check if payments should be disabled for specific client
+  async checkClientFid() {
+    try {
+      const context = await frame.sdk.context;
+      const clientFid = context.client?.clientFid;
+      if (clientFid === 399519) {
+        this.paymentsDisabled = true;
+        console.log('Payments disabled for clientFid 399519');
+      }
+    } catch (e) {
+      // Context not available
+    }
   }
 
   // Start a new game session
