@@ -19,6 +19,10 @@ export class PaymentService {
 
   // Get auth token using Quick Auth
   async getAuthToken() {
+    if (this.paymentsDisabled) {
+      return null;
+    }
+
     try {
       // Check if we have a valid token
       if (this.authToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
