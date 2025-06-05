@@ -89,6 +89,9 @@ export class DebugManager {
     }
     
     setupDoubleTap() {
+        // Double-tap functionality disabled
+        return;
+        
         document.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
             const screenHeight = window.innerHeight;
