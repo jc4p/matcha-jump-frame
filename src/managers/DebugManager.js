@@ -14,6 +14,7 @@ export class DebugManager {
         this.debugClear = document.getElementById('debugClear');
         
         this.init();
+        this.logFrameContext();
     }
     
     init() {
@@ -178,5 +179,15 @@ export class DebugManager {
         this.logs = [];
         this.debugLogs.innerHTML = '';
         console.log('Debug logs cleared');
+    }
+    
+    async logFrameContext() {
+        try {
+            const frame = await import('@farcaster/frame-sdk');
+            const context = await frame.sdk.context;
+            console.log('Frame SDK Context Client:', context.client);
+        } catch (error) {
+            console.log('Frame SDK not available or error getting context:', error);
+        }
     }
 }
