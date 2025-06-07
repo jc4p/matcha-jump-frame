@@ -4,7 +4,7 @@ compatibility_date = "2025-06-04"
 
 # Environment variables
 [vars]
-BASE_RPC_URL = "https://rpc.hyperliquid.xyz/evm"
+HYPER_RPC_URL = "https://rpc.hyperliquid.xyz/evm"
 PAYMENT_ADDRESS = "0x0db12C0A67bc5B8942ea3126a465d7a0b23126C7"
 QUICK_AUTH_DOMAIN = "matcha-jump.kasra.codes"
 # QUICK_AUTH_DOMAIN = "kasra.ngrok.app"
@@ -17,4 +17,4 @@ database_name = "matcha-jump-db"
 database_id = "ad02cf01-57a3-4a37-a8f7-5ad35ec0e45c"
 
 # Secrets (to be set via wrangler secret)
-# wrangler secret put JWT_SECRET
+# wrangler secret put ALCHEMY_API_KEY

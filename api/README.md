@@ -49,6 +49,6 @@ Authorization: Bearer <jwt-token>
 ## Environment Variables
 
 Update the values in `wrangler.toml` as needed:
-- `BASE_RPC_URL` - Base blockchain RPC URL
+- `HYPER_RPC_URL` - HyperEVM blockchain RPC URL
 - `PAYMENT_ADDRESS` - Address to receive payments
 - `QUICK_AUTH_DOMAIN` - Your app domain for Farcaster auth

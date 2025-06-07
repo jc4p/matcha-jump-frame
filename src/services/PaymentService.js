@@ -13,12 +13,19 @@ export class PaymentService {
     this.authToken = null;
     this.tokenExpiry = null;
     this.paymentsDisabled = false;
+    this.clientFid = null;
+    this.userFid = null;
     
     this.checkClientFid();
   }
 
   // Get auth token using Quick Auth
   async getAuthToken() {
+    // For clientFid 399519, we don't need a JWT token
+    if (this.clientFid === 399519) {
+      return 'direct-fid-auth';
+    }
+
     if (this.paymentsDisabled) {
       return null;
     }
@@ -30,7 +37,7 @@ export class PaymentService {
       }
 
       // Get new token from Quick Auth
-      const { token } = await frame.sdk.experimental.quickAuth();
+      const { token } = await frame.sdk.actions.quickAuth();
       this.authToken = token;
       
       // Set expiry to 55 minutes (tokens expire after 1 hour)
@@ -43,15 +50,40 @@ export class PaymentService {
     }
   }
 
+  // Get headers for API requests
+  async getHeaders() {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (this.clientFid === 399519 && this.userFid) {
+      // Use direct FID authentication
+      headers['X-User-FID'] = this.userFid.toString();
+    } else {
+      // Use JWT authentication
+      const authToken = await this.getAuthToken();
+      if (authToken && authToken !== 'direct-fid-auth') {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+    }
+
+    return headers;
+  }
+
   // Utility to convert ETH to Wei
   ethToWei(eth) {
     const wei = BigInt(Math.floor(eth * 1e18)).toString(16);
     return '0x' + wei;
   }
 
-  // Ensure we're connected to the correct network (chain ID 999)
+  // Ensure we're connected to the correct network
   async ensureCorrectNetwork() {
     try {
+      // Determine target chain based on clientFid
+      const targetChainId = this.clientFid === 399519 ? 8453 : 999; // Base for 399519, Hyper for others
+      const targetChainHex = targetChainId === 8453 ? '0x2105' : '0x3e7';
+      const chainName = targetChainId === 8453 ? 'Base' : 'Hyper';
+      
       // Check current chain ID
       const chainId = await frame.sdk.wallet.ethProvider.request({
         method: 'eth_chainId'
@@ -59,35 +91,36 @@ export class PaymentService {
       
       const chainIdDecimal = typeof chainId === 'number' ? chainId : parseInt(chainId, 16);
       
-      if (chainIdDecimal !== 999) {
-        console.log(`Switching from chain ${chainIdDecimal} to chain 999...`);
+      if (chainIdDecimal !== targetChainId) {
+        console.log(`Switching from chain ${chainIdDecimal} to ${chainName} (${targetChainId})...`);
         
-        // Switch to chain ID 999 (0x3e7 in hex)
+        // Switch to target chain
         await frame.sdk.wallet.ethProvider.request({
           method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x3e7' }]
+          params: [{ chainId: targetChainHex }]
         });
         
-        console.log('Successfully switched to chain 999');
+        console.log(`Successfully switched to ${chainName}`);
       } else {
-        console.log('Already connected to chain 999');
+        console.log(`Already connected to ${chainName}`);
       }
     } catch (error) {
       console.error('Failed to switch network:', error);
-      throw new Error('Failed to switch to the required network (chain ID 999)');
+      const targetChain = this.clientFid === 399519 ? 'Base (chain ID 8453)' : 'Hyper (chain ID 999)';
+      throw new Error(`Failed to switch to the required network: ${targetChain}`);
     }
   }
 
   // Make a payment through Frame SDK
   async makePayment(amount, description) {
     try {
-      // Skip if payments are disabled
-      if (this.paymentsDisabled) {
+      // Skip if payments are disabled (but not for clientFid 399519)
+      if (this.paymentsDisabled && this.clientFid !== 399519) {
         console.log('Payment skipped - disabled for this client');
         // Return a mock transaction hash
         return '0x' + Math.random().toString(16).substr(2, 64);
       }
-      
+
       // Ensure we're on the correct network before making any calls
       await this.ensureCorrectNetwork();
       
@@ -123,19 +156,11 @@ export class PaymentService {
   // Verify payment on backend
   async verifyPayment(txHash, type, metadata = {}) {
     try {
-      const authToken = await this.getAuthToken();
-      
-      // If no auth token, throw error
-      if (!authToken) {
-        throw new Error('Authentication required');
-      }
+      const headers = await this.getHeaders();
       
       const response = await fetch(`${API_BASE_URL}/api/verify-payment`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
+        headers,
         body: JSON.stringify({
           txHash,
           type, // 'continue' or 'powerup'
@@ -185,8 +210,8 @@ export class PaymentService {
 
   // Pay to continue playing
   async payContinue(currentScore, currentHeight) {
-    // If payments disabled, return success without payment
-    if (this.paymentsDisabled) {
+    // If payments disabled (but not for clientFid 399519), return success without payment
+    if (this.paymentsDisabled && this.clientFid !== 399519) {
       console.log('Continue payment skipped - disabled for this client');
       return {
         success: true,
@@ -199,12 +224,15 @@ export class PaymentService {
       };
     }
     
-    const amount = 0.001; // 0.001 HYPE
-    const txHash = await this.makePayment(amount, 'Continue playing Matcha Jump');
+    const prices = this.getPrices();
+    const amount = prices.continue;
+    const currency = this.clientFid === 399519 ? 'ETH' : 'HYPE';
+    const txHash = await this.makePayment(amount, `Continue playing Matcha Jump (${amount} ${currency})`);
     
     const verification = await this.verifyPayment(txHash, 'continue', {
       score: currentScore,
-      height: currentHeight
+      height: currentHeight,
+      chain: this.clientFid === 399519 ? 'base' : 'hyper'
     });
     
     return verification;
@@ -212,8 +240,8 @@ export class PaymentService {
 
   // Purchase power-ups
   async purchasePowerUps(powerUpType, quantity = 1) {
-    // If payments disabled, return success without payment
-    if (this.paymentsDisabled) {
+    // If payments disabled (but not for clientFid 399519), return success without payment
+    if (this.paymentsDisabled && this.clientFid !== 399519) {
       console.log('Power-up purchase skipped - disabled for this client');
       return {
         success: true,
@@ -226,23 +254,18 @@ export class PaymentService {
       };
     }
     
-    const prices = {
-      rocket: 0.0005,
-      shield: 0.0005,
-      magnet: 0.0005,
-      slowTime: 0.0005,
-      bundle: 0.0015 // All 4 power-ups
-    };
-
-    const amount = prices[powerUpType] * quantity;
+    const prices = this.getPrices();
+    const amount = prices.powerUps[powerUpType] * quantity;
+    const currency = this.clientFid === 399519 ? 'ETH' : 'HYPE';
     const txHash = await this.makePayment(
       amount, 
-      `Purchase ${quantity}x ${powerUpType} power-up`
+      `Purchase ${quantity}x ${powerUpType} power-up (${amount} ${currency})`
     );
     
     const verification = await this.verifyPayment(txHash, 'powerup', {
       type: powerUpType,
-      quantity
+      quantity,
+      chain: this.clientFid === 399519 ? 'base' : 'hyper'
     });
     
     return verification;
@@ -250,6 +273,21 @@ export class PaymentService {
 
   // Get power-up prices
   getPrices() {
+    // Different pricing for clientFid 399519 (Base chain)
+    if (this.clientFid === 399519) {
+      return {
+        continue: 0.0005,
+        powerUps: {
+          rocket: 0.0006,
+          shield: 0.0006,
+          magnet: 0.0006,
+          slowTime: 0.0006,
+          bundle: 0.0015
+        }
+      };
+    }
+    
+    // Default pricing for Hyper chain
     return {
       continue: 0.001,
       powerUps: {
@@ -266,41 +304,28 @@ export class PaymentService {
   async checkClientFid() {
     try {
       const context = await frame.sdk.context;
-      const clientFid = context.client?.clientFid;
-      if (clientFid === 399519) {
-        this.paymentsDisabled = true;
-        console.log('Payments disabled for clientFid 399519');
+      this.clientFid = context.client?.clientFid;
+      this.userFid = context.user?.fid;
+      
+      if (this.clientFid === 399519) {
+        // Don't disable payments anymore - we'll use direct FID auth
+        console.log('Client 399519 detected - will use direct FID authentication');
+        console.log('User FID:', this.userFid);
       }
     } catch (e) {
       // Context not available
+      console.error('Failed to get Frame context:', e);
     }
   }
 
   // Start a new game session
   async startGameSession() {
     try {
-      const authToken = await this.getAuthToken();
-      
-      // If no auth token, return mock data for development
-      if (!authToken) {
-        console.warn('No auth token available, using mock data');
-        return {
-          sessionId: 'mock-session-' + Date.now(),
-          inventory: {
-            rocket: 3,
-            shield: 3,
-            magnet: 3,
-            slowTime: 3
-          }
-        };
-      }
+      const headers = await this.getHeaders();
       
       const response = await fetch(`${API_BASE_URL}/api/game/start`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        }
+        headers
       });
 
       if (!response.ok) {
@@ -329,23 +354,11 @@ export class PaymentService {
   // End game session and submit stats
   async endGameSession(sessionId, stats) {
     try {
-      const authToken = await this.getAuthToken();
-      
-      // If no auth token, return mock response
-      if (!authToken) {
-        console.warn('No auth token available, using mock response');
-        return {
-          success: true,
-          isNewHighScore: stats.score > 10000
-        };
-      }
+      const headers = await this.getHeaders();
       
       const response = await fetch(`${API_BASE_URL}/api/game/end`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
+        headers,
         body: JSON.stringify({
           sessionId,
           score: stats.score,
@@ -376,23 +389,10 @@ export class PaymentService {
   // Get current power-up inventory
   async getInventory() {
     try {
-      const authToken = await this.getAuthToken();
-      
-      // If no auth token, return mock inventory
-      if (!authToken) {
-        console.warn('No auth token available, using mock inventory');
-        return {
-          rocket: 3,
-          shield: 3,
-          magnet: 3,
-          slowTime: 3
-        };
-      }
+      const headers = await this.getHeaders();
       
       const response = await fetch(`${API_BASE_URL}/api/powerups/inventory`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
+        headers
       });
 
       if (!response.ok) {
@@ -418,20 +418,11 @@ export class PaymentService {
   // Use a power-up during gameplay
   async usePowerUp(type, sessionId) {
     try {
-      const authToken = await this.getAuthToken();
-      
-      // If no auth token, return success for development
-      if (!authToken) {
-        console.warn('No auth token available, returning mock success');
-        return { success: true };
-      }
+      const headers = await this.getHeaders();
       
       const response = await fetch(`${API_BASE_URL}/api/powerups/use`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
+        headers,
         body: JSON.stringify({
           type,
           sessionId

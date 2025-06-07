@@ -731,13 +731,7 @@ export class Game extends GameEngine {
       this.drawButton(ctx, this.width / 2, this.height / 2 + 100, 200, 50, 'AWESOME!', '#10b981');
     } else {
       // Power-up options
-      const powerUpInfo = [
-        { type: 'rocket', icon: '🚀', name: 'Rocket x3', price: '0.0005 HYPE', color: '#ef4444' },
-        { type: 'shield', icon: '🛡️', name: 'Shield x3', price: '0.0005 HYPE', color: '#3b82f6' },
-        { type: 'magnet', icon: '🧲', name: 'Magnet x3', price: '0.0005 HYPE', color: '#8b5cf6' },
-        { type: 'slowTime', icon: '⏱️', name: 'Slow Time x3', price: '0.0005 HYPE', color: '#10b981' },
-        { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: '0.0015 HYPE', color: '#f59e0b' }
-      ];
+      const powerUpInfo = this.getPowerUpShopInfo();
       
       let rowY = 100; // Move down to avoid back button
       
@@ -980,13 +974,7 @@ export class Game extends GameEngine {
       
       if (this.paymentState === null) {
         // Power-up buy buttons
-        const powerUpInfo = [
-          { type: 'rocket', icon: '🚀', name: 'Rocket x3', price: '0.0005 HYPE', color: '#ef4444' },
-          { type: 'shield', icon: '🛡️', name: 'Shield x3', price: '0.0005 HYPE', color: '#3b82f6' },
-          { type: 'magnet', icon: '🧲', name: 'Magnet x3', price: '0.0005 HYPE', color: '#8b5cf6' },
-          { type: 'slowTime', icon: '⏱️', name: 'Slow Time x3', price: '0.0005 HYPE', color: '#10b981' },
-          { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: '0.0015 HYPE', color: '#f59e0b' }
-        ];
+        const powerUpInfo = this.getPowerUpShopInfo();
         
         let rowY = 170; // Start y position (adjusted for moved layout)
         for (const info of powerUpInfo) {
@@ -1155,9 +1143,20 @@ export class Game extends GameEngine {
       // Menu button
       this.drawButton(ctx, this.width / 2, 410, 200, 50, 'BACK TO MENU', '#6b7280');
     } else {
-      // Continue button (payment)
-      this.drawButton(ctx, this.width / 2, 290, 240, 60, 'CONTINUE', '#f59e0b');
+      // Continue button (payment) - show restart height
+      const heightInMeters = Math.floor(Math.abs(this.camera.y) / 100); // Convert to meters (100 units = 1 meter)
+      let buttonText;
       
+      // If on Base (clientFid 399519), show price in button
+      if (paymentService.clientFid === 399519) {
+        const prices = paymentService.getPrices();
+        buttonText = `RESUME FROM ${heightInMeters}m (${prices.continue} ETH)`;
+      } else {
+        buttonText = `RESUME FROM ${heightInMeters}m`;
+      }
+      
+      this.drawButton(ctx, this.width / 2, 290, 240, 60, buttonText, '#f59e0b');
+
       // Power-ups button if inventory is low
       let showPowerUpShop = false;
       for (const [type, count] of Object.entries(this.powerUpInventory)) {
@@ -1172,7 +1171,7 @@ export class Game extends GameEngine {
       }
       
       // Return to menu button
-      this.drawButton(ctx, this.width / 2, showPowerUpShop ? 430 : 360, 200, 50, '🏠 MENU', '#4a7c59');
+      this.drawButton(ctx, this.width / 2, showPowerUpShop ? 430 : 360, 200, 50, 'PLAY AGAIN', '#4a7c59');
       
       // Info
       ctx.fillStyle = '#666';
@@ -1624,9 +1623,13 @@ export class Game extends GameEngine {
       ctx.roundRect(modalX + 60, modalY + 140, 200, 80, 8);
       ctx.fill();
       
+      // Get dynamic pricing
+      const prices = paymentService.getPrices();
+      const currency = paymentService.clientFid === 399519 ? 'ETH' : 'HYPE';
+      
       ctx.fillStyle = '#333';
       ctx.font = '700 28px Rubik, Arial';
-      ctx.fillText('0.001 HYPE', this.width / 2, modalY + 185);
+      ctx.fillText(`${prices.continue} ${currency}`, this.width / 2, modalY + 185);
       
       ctx.fillStyle = '#666';
       ctx.font = '14px Arial';
@@ -1777,13 +1780,7 @@ export class Game extends GameEngine {
       this.drawButton(ctx, this.width / 2, modalY + 350, 160, 40, 'AWESOME!', '#10b981');
     } else {
       // Power-up options
-      const powerUpInfo = [
-        { type: 'rocket', icon: '🚀', name: 'Rocket x3', price: '0.0005 HYPE', color: '#ef4444' },
-        { type: 'shield', icon: '🛡️', name: 'Shield x3', price: '0.0005 HYPE', color: '#3b82f6' },
-        { type: 'magnet', icon: '🧲', name: 'Magnet x3', price: '0.0005 HYPE', color: '#8b5cf6' },
-        { type: 'slowTime', icon: '⏱️', name: 'Slow Time x3', price: '0.0005 HYPE', color: '#10b981' },
-        { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: '0.0015 HYPE', color: '#f59e0b' }
-      ];
+      const powerUpInfo = this.getPowerUpShopInfo();
       
       let rowY = modalY + 90;
       
@@ -1846,13 +1843,7 @@ export class Game extends GameEngine {
       
       if (this.paymentState === null) {
         // Check for power-up buy buttons
-        const powerUpInfo = [
-          { type: 'rocket', icon: '🚀', name: 'Rocket x3', price: '0.0005 ETH', color: '#ef4444' },
-          { type: 'shield', icon: '🛡️', name: 'Shield x3', price: '0.0005 ETH', color: '#3b82f6' },
-          { type: 'magnet', icon: '🧲', name: 'Magnet x3', price: '0.0005 ETH', color: '#8b5cf6' },
-          { type: 'slowTime', icon: '⏱️', name: 'Slow Time x3', price: '0.0005 ETH', color: '#10b981' },
-          { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: '0.0015 ETH', color: '#f59e0b' }
-        ];
+        const powerUpInfo = this.getPowerUpShopInfo();
         
         let rowY = modalY + 90;
         for (const info of powerUpInfo) {
@@ -2135,5 +2126,19 @@ export class Game extends GameEngine {
     } catch (e) {
       console.error('Failed to save high score:', e);
     }
+  }
+  
+  // Helper method to get power-up info with dynamic pricing
+  getPowerUpShopInfo() {
+    const prices = paymentService.getPrices();
+    const currency = paymentService.clientFid === 399519 ? 'ETH' : 'HYPE';
+    
+    return [
+      { type: 'rocket', icon: '🚀', name: 'Rocket x3', price: `${prices.powerUps.rocket} ${currency}`, color: '#ef4444' },
+      { type: 'shield', icon: '🛡️', name: 'Shield x3', price: `${prices.powerUps.shield} ${currency}`, color: '#3b82f6' },
+      { type: 'magnet', icon: '🧲', name: 'Magnet x3', price: `${prices.powerUps.magnet} ${currency}`, color: '#8b5cf6' },
+      { type: 'slowTime', icon: '⏱️', name: 'Slow Time x3', price: `${prices.powerUps.slowTime} ${currency}`, color: '#10b981' },
+      { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: `${prices.powerUps.bundle} ${currency}`, color: '#f59e0b' }
+    ];
   }
 }

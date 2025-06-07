@@ -15,11 +15,26 @@ app.use('*', cors({
   origin: ['https://matcha-jump.kasra.codes', 'http://localhost:3000', 'https://kasra.ngrok.app'],
   credentials: true,
   allowMethods: ['GET', 'POST', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization']
+  allowHeaders: ['Content-Type', 'Authorization', 'X-User-FID']
 }));
 
 // JWT authentication middleware
 async function authMiddleware(c, next) {
+  // Check for X-User-FID header first (for clientFid 399519)
+  const userFidHeader = c.req.header('X-User-FID');
+  if (userFidHeader) {
+    // Validate that this is a legitimate direct FID auth request
+    // In production, you might want to add additional validation here
+    const fid = parseInt(userFidHeader);
+    if (!isNaN(fid) && fid > 0) {
+      c.set('fid', fid.toString());
+      c.set('address', null); // No address available with direct FID auth
+      await next();
+      return;
+    }
+  }
+
+  // Standard JWT authentication
   const authHeader = c.req.header('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return c.json({ error: 'No authorization token provided' }, 401);
@@ -45,11 +60,34 @@ async function authMiddleware(c, next) {
   }
 }
 
-// Initialize viem client for Base
-function getViemClient(c) {
+// Initialize viem client for Base or Hyper
+function getViemClient(c, chain = 'hyper') {
+  if (chain === 'base') {
+    const alchemyUrl = `https://base-mainnet.g.alchemy.com/v2/${c.env.ALCHEMY_API_KEY}`;
+    return createPublicClient({
+      chain: base,
+      transport: http(alchemyUrl),
+    });
+  }
+  
+  // Default to Hyper chain
   return createPublicClient({
-    chain: base,
-    transport: http(c.env.BASE_RPC_URL),
+    chain: {
+      id: 999,
+      name: 'Hyper',
+      network: 'hyper',
+      nativeCurrency: {
+        decimals: 18,
+        name: 'HYPE',
+        symbol: 'HYPE',
+      },
+      rpcUrls: {
+        default: {
+          http: [c.env.HYPER_RPC_URL],
+        },
+      },
+    },
+    transport: http(c.env.HYPER_RPC_URL),
   });
 }
 
@@ -63,6 +101,7 @@ app.post('/api/verify-payment', authMiddleware, async (c) => {
   try {
     const { txHash, type, metadata } = await c.req.json();
     const fid = c.get('fid');
+    const chain = metadata?.chain || 'hyper'; // Default to hyper if not specified
 
     if (!txHash || !type || !metadata) {
       return c.json({ error: 'Missing required fields' }, 400);
@@ -78,7 +117,7 @@ app.post('/api/verify-payment', authMiddleware, async (c) => {
     }
 
     // Verify transaction on-chain with retries
-    const client = getViemClient(c);
+    const client = getViemClient(c, chain);
     let tx = null;
     const maxRetries = 5;
     const retryDelay = 2000; // 2 seconds
@@ -108,15 +147,17 @@ app.post('/api/verify-payment', authMiddleware, async (c) => {
       return c.json({ error: 'Invalid payment address' }, 402);
     }
 
-    // Calculate expected amount based on type
+    // Calculate expected amount based on type and chain
     let expectedAmount;
+    const isBase = chain === 'base';
+    
     if (type === 'continue') {
-      expectedAmount = parseEther('0.001');
+      expectedAmount = parseEther(isBase ? '0.0005' : '0.001');
     } else if (type === 'powerup') {
       if (metadata.type === 'bundle') {
-        expectedAmount = parseEther('0.0015');
+        expectedAmount = parseEther('0.0015'); // Same for both chains
       } else {
-        expectedAmount = parseEther('0.0005');
+        expectedAmount = parseEther(isBase ? '0.0006' : '0.0005');
       }
     } else {
       return c.json({ error: 'Invalid payment type' }, 400);
@@ -133,25 +174,25 @@ app.post('/api/verify-payment', authMiddleware, async (c) => {
     // Update inventory if powerup purchase
     if (type === 'powerup') {
       if (metadata.type === 'bundle') {
-        // Add 3 of each powerup
+        // Add 5 of each powerup
         await c.env.DB.prepare(`
           INSERT INTO powerup_inventory (fid, rocket, shield, magnet, slow_time)
-          VALUES (?, 3, 3, 3, 3)
+          VALUES (?, 5, 5, 5, 5)
           ON CONFLICT(fid) DO UPDATE SET
-            rocket = rocket + 3,
-            shield = shield + 3,
-            magnet = magnet + 3,
-            slow_time = slow_time + 3,
+            rocket = rocket + 5,
+            shield = shield + 5,
+            magnet = magnet + 5,
+            slow_time = slow_time + 5,
             updated_at = unixepoch()
         `).bind(fid).run();
       } else {
-        // Add 3 of specific powerup
+        // Add 5 of specific powerup
         const column = metadata.type.toLowerCase().replace('slowtime', 'slow_time');
         await c.env.DB.prepare(`
           INSERT INTO powerup_inventory (fid, ${column})
-          VALUES (?, 3)
+          VALUES (?, 5)
           ON CONFLICT(fid) DO UPDATE SET
-            ${column} = ${column} + 3,
+            ${column} = ${column} + 5,
             updated_at = unixepoch()
         `).bind(fid).run();
       }

@@ -12,7 +12,7 @@
     "vite": "^6.0.1"
   },
   "dependencies": {
-    "@farcaster/frame-sdk": "^0.0.55",
+    "@farcaster/frame-sdk": "^0.0.60",
     "mitt": "^3.0.1",
     "tone": "^15.1.22"
   }
