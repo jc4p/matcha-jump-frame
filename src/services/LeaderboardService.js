@@ -1,15 +1,12 @@
 class LeaderboardService {
   constructor() {
     this.baseUrl = import.meta.env.VITE_API_URL || 'https://matcha-jump-api.kasra.codes';
-    this.frameContext = null;
-    this.authHeader = null;
   }
 
   async getLeaderboard(limit = 20, offset = 0) {
     try {
       const response = await fetch(`${this.baseUrl}/api/leaderboard?limit=${limit}&offset=${offset}`, {
         method: 'GET',
-        headers
       });
 
       if (!response.ok) {

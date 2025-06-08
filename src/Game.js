@@ -478,7 +478,7 @@ export class Game extends GameEngine {
     this.drawMenuPlayer(ctx);
     
     // Trophy button in top right
-    this.drawButton(ctx, this.width - 50, 50, 60, 60, '🏆', '#f59e0b');
+    this.drawButton(ctx, this.width - 50, 50, 60, 60, '🏆', 'rgba(0, 0, 0, 0)');
     
     // Play button - moved up
     this.drawButton(ctx, this.width / 2, 210, 240, 70, 'PLAY', '#4a7c59');
@@ -949,7 +949,7 @@ export class Game extends GameEngine {
     ctx.fillStyle = '#333';
     ctx.font = 'bold 36px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('🏆 Global Leaderboard', this.width / 2, 80);
+    ctx.fillText('Leaderboard', this.width / 2, 80);
     
     // Fetch leaderboard data if not loaded
     if (!this.leaderboardData && !this.leaderboardLoading && !this.leaderboardError) {
