@@ -1145,15 +1145,7 @@ export class Game extends GameEngine {
     } else {
       // Continue button (payment) - show restart height
       const heightInMeters = Math.floor(Math.abs(this.camera.y) / 100); // Convert to meters (100 units = 1 meter)
-      let buttonText;
-      
-      // If on Base (clientFid 399519), show price in button
-      if (paymentService.clientFid === 399519) {
-        const prices = paymentService.getPrices();
-        buttonText = `RESUME FROM ${heightInMeters}m (${prices.continue} ETH)`;
-      } else {
-        buttonText = `RESUME FROM ${heightInMeters}m`;
-      }
+      const buttonText = `RESUME FROM ${heightInMeters}m`;
       
       this.drawButton(ctx, this.width / 2, 290, 240, 60, buttonText, '#f59e0b');
 
