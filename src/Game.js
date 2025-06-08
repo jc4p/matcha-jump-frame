@@ -419,7 +419,7 @@ export class Game extends GameEngine {
   renderLoading() {
     const ctx = this.ctx;
     ctx.fillStyle = '#333';
-    ctx.font = 'bold 48px Arial';
+    ctx.font = 'bold 48px Rubik, Arial';
     ctx.textAlign = 'center';
     ctx.fillText('Matcha Jump', this.width / 2, this.height / 3);
     
@@ -444,7 +444,7 @@ export class Game extends GameEngine {
     ctx.strokeRect(barX, barY, barWidth, barHeight);
     
     // Loading text
-    ctx.font = '20px Arial';
+    ctx.font = '20px Rubik, Arial';
     ctx.fillStyle = '#333';
     ctx.fillText('Loading assets...', this.width / 2, barY + 50);
   }
@@ -550,13 +550,13 @@ export class Game extends GameEngine {
       
       // Icon - make sure fillStyle is set for emoji
       ctx.fillStyle = isSelected ? '#fff' : '#333';
-      ctx.font = '32px Arial';
+      ctx.font = '32px Rubik, Arial';
       ctx.textAlign = 'center';
       ctx.fillText(info.icon, btnX, btnY);
       
       // Count
       ctx.fillStyle = isSelected ? '#fff' : '#333';
-      ctx.font = 'bold 14px Arial';
+      ctx.font = 'bold 14px Rubik, Arial';
       ctx.fillText(`x${this.powerUpInventory[type]}`, btnX, btnY + 22);
       
       // Disabled overlay if no inventory
@@ -584,11 +584,11 @@ export class Game extends GameEngine {
       
       // Power-up name and description
       ctx.fillStyle = '#333';
-      ctx.font = 'bold 18px Arial';
+      ctx.font = 'bold 18px Rubik, Arial';
       ctx.textAlign = 'center';
       ctx.fillText(`${selectedInfo.icon} ${this.selectedPowerUp.toUpperCase()}`, this.width / 2, 535);
       
-      ctx.font = '14px Arial';
+      ctx.font = '14px Rubik, Arial';
       ctx.fillStyle = '#666';
       ctx.fillText(selectedInfo.desc, this.width / 2, 555);
     }
@@ -681,7 +681,7 @@ export class Game extends GameEngine {
     if (this.paymentState === 'processing' || this.paymentState === 'verifying') {
       // Loading state
       ctx.fillStyle = '#666';
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       ctx.textAlign = 'center';
       ctx.fillText(this.paymentState === 'processing' ? 'Processing payment...' : 'Verifying transaction...', this.width / 2, this.height / 2);
       
@@ -705,12 +705,12 @@ export class Game extends GameEngine {
     } else if (this.paymentState === 'success') {
       // Success state for main menu
       ctx.fillStyle = '#10b981';
-      ctx.font = '600 32px Arial';
+      ctx.font = '600 32px Rubik, Arial';
       ctx.textAlign = 'center';
       ctx.fillText('🎉 CONGRATULATIONS! 🎉', this.width / 2, this.height / 2 - 60);
       
       ctx.fillStyle = '#333';
-      ctx.font = '24px Arial';
+      ctx.font = '24px Rubik, Arial';
       
       if (this.purchaseSuccessType === 'bundle') {
         ctx.fillText('You got 3 of each power-up!', this.width / 2, this.height / 2 - 10);
@@ -725,7 +725,7 @@ export class Game extends GameEngine {
       }
       
       ctx.fillStyle = '#10b981';
-      ctx.font = '20px Arial';
+      ctx.font = '20px Rubik, Arial';
       ctx.fillText('Time to show off your new powers!', this.width / 2, this.height / 2 + 30);
       
       // Animated sparkles
@@ -737,7 +737,7 @@ export class Game extends GameEngine {
         const y = this.height / 2 + Math.sin(angle) * radius;
         
         ctx.fillStyle = `rgba(16, 185, 129, ${0.6 + Math.sin(sparkleTime * 3 + i) * 0.4})`;
-        ctx.font = '20px Arial';
+        ctx.font = '20px Rubik, Arial';
         ctx.fillText('✨', x, y);
       }
       
@@ -755,7 +755,7 @@ export class Game extends GameEngine {
       ctx.textAlign = 'center';
       ctx.fillText('Current Inventory', this.width / 2, rowY);
       
-      ctx.font = '24px Arial';
+      ctx.font = '24px Rubik, Arial';
       const invText = `🚀 ${this.powerUpInventory.rocket}  🛡️ ${this.powerUpInventory.shield}  🧲 ${this.powerUpInventory.magnet}  ⏱️ ${this.powerUpInventory.slowTime}`;
       ctx.fillText(invText, this.width / 2, rowY + 35);
       
@@ -769,7 +769,7 @@ export class Game extends GameEngine {
         ctx.fill();
         
         // Icon
-        ctx.font = '28px Arial';
+        ctx.font = '28px Rubik, Arial';
         ctx.textAlign = 'left';
         ctx.fillText(info.icon, this.width / 2 - 140, rowY + 38);
         
@@ -791,7 +791,7 @@ export class Game extends GameEngine {
       
       // Info text
       ctx.fillStyle = '#666';
-      ctx.font = '14px Arial';
+      ctx.font = '14px Rubik, Arial';
       ctx.textAlign = 'center';
       ctx.fillText('Purchases give 5 uses of each power-up', this.width / 2, this.height - 30);
     }
@@ -800,7 +800,7 @@ export class Game extends GameEngine {
   renderPowerUpShop(ctx) {
     // Header
     ctx.fillStyle = '#333';
-    ctx.font = 'bold 40px Arial';
+    ctx.font = 'bold 40px Rubik, Arial';
     ctx.textAlign = 'center';
     ctx.fillText('Power-Up Inventory', this.width / 2, 60);
     
@@ -823,22 +823,22 @@ export class Game extends GameEngine {
       ctx.fillRect(this.width / 2 - 150, y, 300, 80);
       
       // Icon and name
-      ctx.font = '32px Arial';
+      ctx.font = '32px Rubik, Arial';
       ctx.textAlign = 'left';
       ctx.fillText(info.icon, this.width / 2 - 130, y + 35);
       
       ctx.fillStyle = info.color;
-      ctx.font = 'bold 24px Arial';
+      ctx.font = 'bold 24px Rubik, Arial';
       ctx.fillText(info.name, this.width / 2 - 80, y + 30);
       
       // Description
       ctx.fillStyle = '#666';
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       ctx.fillText(info.desc, this.width / 2 - 80, y + 55);
       
       // Inventory count
       ctx.fillStyle = '#333';
-      ctx.font = 'bold 28px Arial';
+      ctx.font = 'bold 28px Rubik, Arial';
       ctx.textAlign = 'right';
       ctx.fillText(`x${this.powerUpInventory[type]}`, this.width / 2 + 120, y + 45);
       
@@ -847,7 +847,7 @@ export class Game extends GameEngine {
     
     // Info text
     ctx.fillStyle = '#666';
-    ctx.font = '14px Arial';
+    ctx.font = '14px Rubik, Arial';
     ctx.textAlign = 'center';
     ctx.fillText('Select power-ups before starting a game!', this.width / 2, this.height - 30);
   }
@@ -855,7 +855,7 @@ export class Game extends GameEngine {
   renderPreGameMenu(ctx) {
     // Header
     ctx.fillStyle = '#333';
-    ctx.font = 'bold 36px Arial';
+    ctx.font = 'bold 36px Rubik, Arial';
     ctx.textAlign = 'center';
     ctx.fillText('Select a Power-Up', this.width / 2, 60);
     
@@ -881,14 +881,14 @@ export class Game extends GameEngine {
       ctx.fillRect(this.width / 2 - 120, y, 240, 60);
       
       // Content
-      ctx.font = '24px Arial';
+      ctx.font = '24px Rubik, Arial';
       ctx.textAlign = 'left';
       ctx.fillStyle = isSelected ? '#fff' : (hasInventory ? '#333' : '#999');
       ctx.fillText(`${info.icon} ${info.name}`, this.width / 2 - 100, y + 38);
       
       // Count
       ctx.textAlign = 'right';
-      ctx.font = 'bold 20px Arial';
+      ctx.font = 'bold 20px Rubik, Arial';
       ctx.fillText(`x${this.powerUpInventory[type]}`, this.width / 2 + 100, y + 38);
       
       y += 70;
@@ -901,7 +901,7 @@ export class Game extends GameEngine {
     
     // Info
     ctx.fillStyle = '#666';
-    ctx.font = '14px Arial';
+    ctx.font = '14px Rubik, Arial';
     ctx.textAlign = 'center';
     ctx.fillText(this.selectedPowerUp ? 
       'Power-up will activate at game start!' : 
@@ -947,7 +947,7 @@ export class Game extends GameEngine {
     
     // Title
     ctx.fillStyle = '#333';
-    ctx.font = 'bold 36px Arial';
+    ctx.font = 'bold 36px Rubik, Arial';
     ctx.textAlign = 'center';
     ctx.fillText('Leaderboard', this.width / 2, 80);
     
@@ -960,7 +960,7 @@ export class Game extends GameEngine {
     if (this.leaderboardLoading) {
       // Loading state
       ctx.fillStyle = '#666';
-      ctx.font = '20px Arial';
+      ctx.font = '20px Rubik, Arial';
       ctx.fillText('Loading leaderboard...', this.width / 2, this.height / 2);
       
       // Loading animation
@@ -982,10 +982,10 @@ export class Game extends GameEngine {
     } else if (this.leaderboardError) {
       // Error state
       ctx.fillStyle = '#dc2626';
-      ctx.font = '20px Arial';
+      ctx.font = '20px Rubik, Arial';
       ctx.fillText('Failed to load leaderboard', this.width / 2, this.height / 2);
       ctx.fillStyle = '#666';
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       ctx.fillText('Please try again later', this.width / 2, this.height / 2 + 30);
     } else if (this.leaderboardData) {
       // Display leaderboard
@@ -995,7 +995,7 @@ export class Game extends GameEngine {
       
       // Header
       ctx.fillStyle = '#666';
-      ctx.font = 'bold 16px Arial';
+      ctx.font = 'bold 16px Rubik, Arial';
       ctx.textAlign = 'left';
       ctx.fillText('RANK', 40, startY);
       ctx.fillText('PLAYER', 110, startY);
@@ -1023,7 +1023,7 @@ export class Game extends GameEngine {
         }
         
         // Rank
-        ctx.font = 'bold 18px Arial';
+        ctx.font = 'bold 18px Rubik, Arial';
         ctx.textAlign = 'left';
         if (entry.rank === 1) {
           ctx.fillStyle = '#fbbf24';
@@ -1040,13 +1040,13 @@ export class Game extends GameEngine {
         }
         
         // Player FID (username would be better but not available)
-        ctx.font = isCurrentUser ? 'bold 16px Arial' : '16px Arial';
+        ctx.font = isCurrentUser ? 'bold 16px Rubik, Arial' : '16px Rubik, Arial';
         ctx.fillStyle = isCurrentUser ? '#f59e0b' : '#333';
         ctx.fillText(`FID ${entry.fid}${isCurrentUser ? ' (You)' : ''}`, 110, y);
         
         // Score
         ctx.textAlign = 'right';
-        ctx.font = 'bold 18px Arial';
+        ctx.font = 'bold 18px Rubik, Arial';
         ctx.fillStyle = isCurrentUser ? '#f59e0b' : '#333';
         ctx.fillText(entry.score.toLocaleString(), this.width - 40, y);
       }
@@ -1055,7 +1055,7 @@ export class Game extends GameEngine {
       if (this.leaderboardData.userRank && this.leaderboardData.userRank > 20) {
         const y = startY + 30 + (maxRows * rowHeight) + 20;
         ctx.fillStyle = '#666';
-        ctx.font = '16px Arial';
+        ctx.font = '16px Rubik, Arial';
         ctx.textAlign = 'center';
         ctx.fillText(`Your rank: #${this.leaderboardData.userRank}`, this.width / 2, y);
       }
@@ -1283,7 +1283,7 @@ export class Game extends GameEngine {
     } else if (this.paymentState === 'processing' || this.paymentState === 'verifying') {
       // Show loading state for continue payment
       ctx.fillStyle = '#666';
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       ctx.textAlign = 'center';
       ctx.fillText(this.paymentState === 'processing' ? 'Processing payment...' : 'Verifying transaction...', this.width / 2, 320);
       
@@ -1307,12 +1307,12 @@ export class Game extends GameEngine {
     } else if (this.paymentState === 'error') {
       // Show error state for continue payment
       ctx.fillStyle = '#dc2626';
-      ctx.font = '600 18px Arial';
+      ctx.font = '600 18px Rubik, Arial';
       ctx.textAlign = 'center';
       ctx.fillText('Payment Failed', this.width / 2, 280);
       
       ctx.fillStyle = '#666';
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       const errorMessage = this.paymentError || 'Transaction failed. Please try again.';
       ctx.fillText(errorMessage, this.width / 2, 310);
       
@@ -1350,7 +1350,7 @@ export class Game extends GameEngine {
       
       // Info
       ctx.fillStyle = '#666';
-      ctx.font = '14px Arial';
+      ctx.font = '14px Rubik, Arial';
       ctx.fillText('Continue playing or return to menu', this.width / 2, this.height - 40);
     }
   }
@@ -1382,7 +1382,7 @@ export class Game extends GameEngine {
     
     for (const powerUp of activePowerUps) {
       ctx.fillStyle = powerUp.properties.color;
-      ctx.font = 'bold 18px Arial';
+      ctx.font = 'bold 18px Rubik, Arial';
       ctx.textAlign = 'left';
       
       let text = `${powerUp.properties.icon} ${powerUp.properties.name}`;
@@ -1401,7 +1401,7 @@ export class Game extends GameEngine {
       
       // Simple text instruction - white for dark theme
       ctx.fillStyle = isDarkTheme ? `rgba(255, 255, 255, ${0.7 * alpha})` : `rgba(0, 0, 0, ${0.5 * alpha})`;
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       ctx.textAlign = 'center';
       ctx.fillText('Touch left or right side to move', this.width / 2, this.height - 40);
     }
@@ -1430,13 +1430,13 @@ export class Game extends GameEngine {
         ctx.strokeRect(btnX - 30, btnY - 30, 60, 60);
         
         // Icon
-        ctx.font = '32px Arial';
+        ctx.font = '32px Rubik, Arial';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#fff';
         ctx.fillText(info.icon, btnX, btnY + 10);
         
         // Instructions
-        ctx.font = '12px Arial';
+        ctx.font = '12px Rubik, Arial';
         ctx.fillStyle = '#333';
         ctx.fillText('Double tap', btnX, btnY - 40);
       }
@@ -1714,7 +1714,7 @@ export class Game extends GameEngine {
     if (this.paymentState === 'processing') {
       // Loading state
       ctx.fillStyle = '#666';
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       ctx.fillText('Processing payment...', this.width / 2, modalY + 200);
       
       // Loading dots animation
@@ -1736,7 +1736,7 @@ export class Game extends GameEngine {
     } else if (this.paymentState === 'verifying') {
       // Verifying state
       ctx.fillStyle = '#666';
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       ctx.fillText('Verifying transaction...', this.width / 2, modalY + 200);
       
       // Loading dots animation
@@ -1758,11 +1758,11 @@ export class Game extends GameEngine {
     } else if (this.paymentState === 'error') {
       // Error state
       ctx.fillStyle = '#dc2626';
-      ctx.font = '600 18px Arial';
+      ctx.font = '600 18px Rubik, Arial';
       ctx.fillText('Payment Failed', this.width / 2, modalY + 180);
       
       ctx.fillStyle = '#666';
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       const errorMessage = this.paymentError || 'Transaction failed. Please try again.';
       
       // Word wrap for long error messages
@@ -1793,7 +1793,7 @@ export class Game extends GameEngine {
     } else {
       // Payment info
       ctx.fillStyle = '#666';
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       ctx.fillText('Continue from a safe position', this.width / 2, modalY + 90);
       ctx.fillText('and keep your current score!', this.width / 2, modalY + 110);
       
@@ -1812,7 +1812,7 @@ export class Game extends GameEngine {
       ctx.fillText(`${prices.continue} ${currency}`, this.width / 2, modalY + 185);
       
       ctx.fillStyle = '#666';
-      ctx.font = '14px Arial';
+      ctx.font = '14px Rubik, Arial';
       ctx.fillText('One-time payment', this.width / 2, modalY + 205);
       
       // Pay button
@@ -1855,7 +1855,7 @@ export class Game extends GameEngine {
     if (this.paymentState === 'processing') {
       // Loading state
       ctx.fillStyle = '#666';
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       ctx.fillText('Processing payment...', this.width / 2, modalY + 250);
       
       // Loading dots animation
@@ -1877,7 +1877,7 @@ export class Game extends GameEngine {
     } else if (this.paymentState === 'verifying') {
       // Verifying state
       ctx.fillStyle = '#666';
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       ctx.fillText('Verifying transaction...', this.width / 2, modalY + 250);
       
       // Loading dots animation
@@ -1899,11 +1899,11 @@ export class Game extends GameEngine {
     } else if (this.paymentState === 'error') {
       // Error state
       ctx.fillStyle = '#dc2626';
-      ctx.font = '600 18px Arial';
+      ctx.font = '600 18px Rubik, Arial';
       ctx.fillText('Purchase Failed', this.width / 2, modalY + 220);
       
       ctx.fillStyle = '#666';
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       const errorMessage = this.paymentError || 'Transaction failed. Please try again.';
       
       // Word wrap for long error messages
@@ -1934,11 +1934,11 @@ export class Game extends GameEngine {
     } else if (this.paymentState === 'success') {
       // Success state
       ctx.fillStyle = '#10b981';
-      ctx.font = '600 24px Arial';
+      ctx.font = '600 24px Rubik, Arial';
       ctx.fillText('🎉 Purchase Successful! 🎉', this.width / 2, modalY + 200);
       
       ctx.fillStyle = '#333';
-      ctx.font = '18px Arial';
+      ctx.font = '18px Rubik, Arial';
       
       if (this.purchaseSuccessType === 'bundle') {
         ctx.fillText('You got 3 of each power-up!', this.width / 2, modalY + 240);
@@ -1953,7 +1953,7 @@ export class Game extends GameEngine {
       }
       
       ctx.fillStyle = '#666';
-      ctx.font = '16px Arial';
+      ctx.font = '16px Rubik, Arial';
       ctx.fillText('Ready to dominate the game!', this.width / 2, modalY + 280);
       
       // Continue button
@@ -1972,7 +1972,7 @@ export class Game extends GameEngine {
         ctx.fill();
         
         // Icon
-        ctx.font = '28px Arial';
+        ctx.font = '28px Rubik, Arial';
         ctx.textAlign = 'left';
         ctx.fillText(info.icon, modalX + 40, rowY + 38);
         
@@ -2009,7 +2009,7 @@ export class Game extends GameEngine {
       
       // Info text
       ctx.fillStyle = '#666';
-      ctx.font = '12px Arial';
+      ctx.font = '12px Rubik, Arial';
       ctx.fillText('Purchases give 5 uses of each power-up', this.width / 2, modalY + modalHeight - 20);
     }
   }
