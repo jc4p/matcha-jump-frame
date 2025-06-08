@@ -385,9 +385,18 @@ app.post('/api/game/end', authMiddleware, async (c) => {
       `).bind(score, fid).run();
     }
 
+    // Get player's global rank
+    const finalScore = !stats || score > stats.high_score ? score : stats.high_score;
+    const rankResult = await c.env.DB.prepare(`
+      SELECT COUNT(*) + 1 as rank
+      FROM user_stats
+      WHERE high_score > ?
+    `).bind(finalScore).first();
+
     return c.json({ 
       success: true,
-      isNewHighScore: !stats || score > stats.high_score 
+      isNewHighScore: !stats || score > stats.high_score,
+      globalRank: rankResult?.rank || 1
     });
 
   } catch (error) {
@@ -427,6 +436,82 @@ app.get('/api/stats/:fid', async (c) => {
 
   } catch (error) {
     console.error('Stats fetch error:', error);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+// Get global leaderboard
+app.get('/api/leaderboard', async (c) => {
+  try {
+    const limit = parseInt(c.req.query('limit') || '20');
+    const offset = parseInt(c.req.query('offset') || '0');
+    
+    // Get top scores
+    const leaderboard = await c.env.DB.prepare(`
+      SELECT 
+        fid,
+        high_score as score,
+        total_games,
+        updated_at
+      FROM user_stats
+      WHERE high_score > 0
+      ORDER BY high_score DESC
+      LIMIT ? OFFSET ?
+    `).bind(limit, offset).all();
+
+    // Add rank to each entry
+    const rankedLeaderboard = leaderboard.results.map((entry, index) => ({
+      rank: offset + index + 1,
+      fid: entry.fid,
+      score: entry.score,
+      totalGames: entry.total_games,
+      lastPlayed: entry.updated_at
+    }));
+
+    // Get authenticated user's rank if available
+    let userRank = null;
+    const authHeader = c.req.header('Authorization');
+    const userFidHeader = c.req.header('X-User-FID');
+    
+    if (authHeader || userFidHeader) {
+      try {
+        let userFid;
+        if (userFidHeader) {
+          userFid = parseInt(userFidHeader);
+        } else if (authHeader && authHeader.startsWith('Bearer ')) {
+          const token = authHeader.split(' ')[1];
+          const payload = await quickAuthClient.verifyJwt({
+            token,
+            domain: c.env.QUICK_AUTH_DOMAIN
+          });
+          userFid = parseInt(payload.sub);
+        }
+
+        if (userFid) {
+          const userRankResult = await c.env.DB.prepare(`
+            SELECT COUNT(*) + 1 as rank
+            FROM user_stats
+            WHERE high_score > (
+              SELECT high_score FROM user_stats WHERE fid = ?
+            )
+          `).bind(userFid).first();
+          
+          userRank = userRankResult?.rank || null;
+        }
+      } catch (error) {
+        // Silently fail - user rank is optional
+        console.error('Error getting user rank:', error);
+      }
+    }
+
+    return c.json({
+      leaderboard: rankedLeaderboard,
+      total: leaderboard.results.length,
+      userRank
+    });
+
+  } catch (error) {
+    console.error('Leaderboard fetch error:', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

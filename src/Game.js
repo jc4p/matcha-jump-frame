@@ -15,6 +15,7 @@ import { ComboManager } from './managers/ComboManager.js';
 import { BackgroundManager } from './managers/BackgroundManager.js';
 import { paymentService } from './services/PaymentService.js';
 import { hapticsService } from './services/HapticsService.js';
+import { leaderboardService } from './services/LeaderboardService.js';
 
 export class Game extends GameEngine {
   constructor(canvas) {
@@ -76,6 +77,13 @@ export class Game extends GameEngine {
     this.gameStartTime = null;
     this.powerUpsUsedThisGame = {};
     this.coinsCollectedThisGame = 0;
+    
+    // Leaderboard state
+    this.leaderboardData = null;
+    this.leaderboardLoading = false;
+    this.leaderboardError = null;
+    this.showLeaderboardInGameOver = false;
+    this.playerGlobalRank = null;
     
     this.init();
   }
@@ -238,6 +246,7 @@ export class Game extends GameEngine {
     this.gameStartTime = Date.now();
     this.powerUpsUsedThisGame = {};
     this.coinsCollectedThisGame = 0;
+    this.playerGlobalRank = null;
     
     // Start game session with backend
     try {
@@ -456,6 +465,8 @@ export class Game extends GameEngine {
       this.renderPowerUpShop(ctx);
     } else if (this.menuState === 'pre-game') {
       this.renderPreGameMenu(ctx);
+    } else if (this.menuState === 'leaderboard') {
+      this.renderLeaderboard(ctx);
     }
   }
   
@@ -465,6 +476,9 @@ export class Game extends GameEngine {
     
     // Draw animated player
     this.drawMenuPlayer(ctx);
+    
+    // Trophy button in top right
+    this.drawButton(ctx, this.width - 50, 50, 60, 60, '🏆', '#f59e0b');
     
     // Play button - moved up
     this.drawButton(ctx, this.width / 2, 210, 240, 70, 'PLAY', '#4a7c59');
@@ -927,8 +941,149 @@ export class Game extends GameEngine {
     ctx.textBaseline = 'alphabetic';
   }
   
+  async renderLeaderboard(ctx) {
+    // Back button
+    this.drawButton(ctx, 60, 50, 80, 40, '← Back', '#666');
+    
+    // Title
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 36px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('🏆 Global Leaderboard', this.width / 2, 80);
+    
+    // Fetch leaderboard data if not loaded
+    if (!this.leaderboardData && !this.leaderboardLoading && !this.leaderboardError) {
+      this.leaderboardLoading = true;
+      this.fetchLeaderboard();
+    }
+    
+    if (this.leaderboardLoading) {
+      // Loading state
+      ctx.fillStyle = '#666';
+      ctx.font = '20px Arial';
+      ctx.fillText('Loading leaderboard...', this.width / 2, this.height / 2);
+      
+      // Loading animation
+      const time = Date.now() * 0.01;
+      const centerX = this.width / 2;
+      const centerY = this.height / 2 + 50;
+      
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2 + time;
+        const x = centerX + Math.cos(angle) * 15;
+        const y = centerY + Math.sin(angle) * 15;
+        const opacity = 0.3 + 0.7 * Math.sin(time * 2 + i * 0.5);
+        
+        ctx.fillStyle = '#f59e0b' + Math.floor(opacity * 255).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (this.leaderboardError) {
+      // Error state
+      ctx.fillStyle = '#dc2626';
+      ctx.font = '20px Arial';
+      ctx.fillText('Failed to load leaderboard', this.width / 2, this.height / 2);
+      ctx.fillStyle = '#666';
+      ctx.font = '16px Arial';
+      ctx.fillText('Please try again later', this.width / 2, this.height / 2 + 30);
+    } else if (this.leaderboardData) {
+      // Display leaderboard
+      const startY = 140;
+      const rowHeight = 35;
+      const maxRows = Math.min(20, this.leaderboardData.leaderboard.length);
+      
+      // Header
+      ctx.fillStyle = '#666';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('RANK', 40, startY);
+      ctx.fillText('PLAYER', 110, startY);
+      ctx.textAlign = 'right';
+      ctx.fillText('SCORE', this.width - 40, startY);
+      
+      // Divider
+      ctx.strokeStyle = '#ddd';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(40, startY + 10);
+      ctx.lineTo(this.width - 40, startY + 10);
+      ctx.stroke();
+      
+      // Leaderboard entries
+      for (let i = 0; i < maxRows; i++) {
+        const entry = this.leaderboardData.leaderboard[i];
+        const y = startY + 30 + (i * rowHeight);
+        
+        // Highlight user's row
+        const isCurrentUser = this.frameContext?.user?.fid === entry.fid;
+        if (isCurrentUser) {
+          ctx.fillStyle = 'rgba(245, 158, 11, 0.1)';
+          ctx.fillRect(30, y - 20, this.width - 60, 30);
+        }
+        
+        // Rank
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'left';
+        if (entry.rank === 1) {
+          ctx.fillStyle = '#fbbf24';
+          ctx.fillText('🥇', 40, y);
+        } else if (entry.rank === 2) {
+          ctx.fillStyle = '#d1d5db';
+          ctx.fillText('🥈', 40, y);
+        } else if (entry.rank === 3) {
+          ctx.fillStyle = '#fb923c';
+          ctx.fillText('🥉', 40, y);
+        } else {
+          ctx.fillStyle = isCurrentUser ? '#f59e0b' : '#666';
+          ctx.fillText(entry.rank.toString(), 50, y);
+        }
+        
+        // Player FID (username would be better but not available)
+        ctx.font = isCurrentUser ? 'bold 16px Arial' : '16px Arial';
+        ctx.fillStyle = isCurrentUser ? '#f59e0b' : '#333';
+        ctx.fillText(`FID ${entry.fid}${isCurrentUser ? ' (You)' : ''}`, 110, y);
+        
+        // Score
+        ctx.textAlign = 'right';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillStyle = isCurrentUser ? '#f59e0b' : '#333';
+        ctx.fillText(entry.score.toLocaleString(), this.width - 40, y);
+      }
+      
+      // Show user's rank if not in top 20
+      if (this.leaderboardData.userRank && this.leaderboardData.userRank > 20) {
+        const y = startY + 30 + (maxRows * rowHeight) + 20;
+        ctx.fillStyle = '#666';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Your rank: #${this.leaderboardData.userRank}`, this.width / 2, y);
+      }
+    }
+  }
+  
+  async fetchLeaderboard() {
+    try {
+      const data = await leaderboardService.getLeaderboard(20);
+      this.leaderboardData = data;
+      this.leaderboardLoading = false;
+      this.leaderboardError = null;
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error);
+      this.leaderboardError = error.message;
+      this.leaderboardLoading = false;
+    }
+  }
+  
   handleMenuClick(x, y) {
     if (this.menuState === 'main') {
+      // Trophy button - top right
+      if (this.isPointInButton(x, y, this.width - 50, 50, 60, 60)) {
+        eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
+        this.menuState = 'leaderboard';
+        return;
+      }
+      
       // Play button - updated position
       if (y >= 175 && y <= 245 && x >= this.width/2 - 120 && x <= this.width/2 + 120) {
         eventBus.emit(Events.HAPTIC_TRIGGER, 'medium');
@@ -1002,6 +1157,23 @@ export class Game extends GameEngine {
     else if (this.menuState === 'pre-game') {
       // This state is no longer used
       this.menuState = 'main';
+    }
+    else if (this.menuState === 'leaderboard') {
+      // Back button
+      if (this.isPointInButton(x, y, 60, 50, 80, 40)) {
+        eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
+        if (this.showLeaderboardInGameOver) {
+          // Go back to game over screen
+          this.gameState = 'gameOver';
+          this.menuState = 'main';
+          this.showLeaderboardInGameOver = false;
+        } else {
+          // Go back to main menu
+          this.menuState = 'main';
+        }
+        this.leaderboardData = null;
+        this.leaderboardError = null;
+      }
     }
   }
   
@@ -1098,6 +1270,13 @@ export class Game extends GameEngine {
     ctx.fillText(finalScore > this.highScore ? 'NEW HIGH SCORE!' : `High Score: ${this.highScore.toLocaleString()}`, 
                  this.width / 2, 220);
     
+    // Show global rank if available
+    if (this.playerGlobalRank) {
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '600 18px Rubik, Arial';
+      ctx.fillText(`Global Rank: #${this.playerGlobalRank}`, this.width / 2, 250);
+    }
+    
     // Show payment modal or regular game over options
     if (this.paymentModal === 'powerups') {
       this.renderPowerUpPurchaseModal(ctx);
@@ -1164,6 +1343,10 @@ export class Game extends GameEngine {
       
       // Return to menu button
       this.drawButton(ctx, this.width / 2, showPowerUpShop ? 430 : 360, 200, 50, 'PLAY AGAIN', '#4a7c59');
+      
+      // Leaderboard button
+      const leaderboardY = showPowerUpShop ? 500 : 430;
+      this.drawButton(ctx, this.width / 2, leaderboardY, 200, 50, '🏆 LEADERBOARD', '#f59e0b');
       
       // Info
       ctx.fillStyle = '#666';
@@ -1470,12 +1653,17 @@ export class Game extends GameEngine {
     // End game session
     if (this.gameSessionId) {
       try {
-        await paymentService.endGameSession(this.gameSessionId, {
+        const result = await paymentService.endGameSession(this.gameSessionId, {
           score: this.baseHeightScore + this.score,
           height: Math.abs(this.camera.y),
           powerupsUsed: this.powerUpsUsedThisGame,
           coinsCollected: this.coinsCollectedThisGame
         });
+        
+        // Store the global rank from the response
+        if (result && result.globalRank) {
+          this.playerGlobalRank = result.globalRank;
+        }
       } catch (error) {
         console.error('Failed to end game session:', error);
       }
@@ -1924,10 +2112,20 @@ export class Game extends GameEngine {
         return;
       }
       
-      // Menu button
+      // Play again button
       const menuY = showPowerUpShop ? 430 : 360;
       if (this.isPointInButton(x, y, this.width / 2, menuY, 200, 50)) {
         this.showMenu();
+        eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
+        return;
+      }
+      
+      // Leaderboard button
+      const leaderboardY = showPowerUpShop ? 500 : 430;
+      if (this.isPointInButton(x, y, this.width / 2, leaderboardY, 200, 50)) {
+        this.showLeaderboardInGameOver = true;
+        this.gameState = 'menu';
+        this.menuState = 'leaderboard';
         eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
         return;
       }
