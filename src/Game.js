@@ -707,7 +707,7 @@ export class Game extends GameEngine {
           magnet: 'Coin Magnet',
           slowTime: 'Slow Time'
         };
-        ctx.fillText(`You got 3x ${powerUpNames[this.purchaseSuccessType]}!`, this.width / 2, this.height / 2 - 10);
+        ctx.fillText(`You got 5x ${powerUpNames[this.purchaseSuccessType]}!`, this.width / 2, this.height / 2 - 10);
       }
       
       ctx.fillStyle = '#10b981';
@@ -779,7 +779,7 @@ export class Game extends GameEngine {
       ctx.fillStyle = '#666';
       ctx.font = '14px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('Purchases give 3 uses of each power-up', this.width / 2, this.height - 30);
+      ctx.fillText('Purchases give 5 uses of each power-up', this.width / 2, this.height - 30);
     }
   }
   
@@ -1769,7 +1769,7 @@ export class Game extends GameEngine {
           magnet: 'Magnet',
           slowTime: 'Slow Time'
         };
-        ctx.fillText(`You got 3x ${powerUpNames[this.purchaseSuccessType]}!`, this.width / 2, modalY + 240);
+        ctx.fillText(`You got 5x ${powerUpNames[this.purchaseSuccessType]}!`, this.width / 2, modalY + 240);
       }
       
       ctx.fillStyle = '#666';
@@ -1830,7 +1830,7 @@ export class Game extends GameEngine {
       // Info text
       ctx.fillStyle = '#666';
       ctx.font = '12px Arial';
-      ctx.fillText('Purchases give 3 uses of each power-up', this.width / 2, modalY + modalHeight - 20);
+      ctx.fillText('Purchases give 5 uses of each power-up', this.width / 2, modalY + modalHeight - 20);
     }
   }
   
@@ -2134,11 +2134,11 @@ export class Game extends GameEngine {
     const currency = paymentService.clientFid === 399519 ? 'ETH' : 'HYPE';
     
     return [
-      { type: 'rocket', icon: '🚀', name: 'Rocket x3', price: `${prices.powerUps.rocket} ${currency}`, color: '#ef4444' },
-      { type: 'shield', icon: '🛡️', name: 'Shield x3', price: `${prices.powerUps.shield} ${currency}`, color: '#3b82f6' },
-      { type: 'magnet', icon: '🧲', name: 'Magnet x3', price: `${prices.powerUps.magnet} ${currency}`, color: '#8b5cf6' },
-      { type: 'slowTime', icon: '⏱️', name: 'Slow Time x3', price: `${prices.powerUps.slowTime} ${currency}`, color: '#10b981' },
-      { type: 'bundle', icon: '🎁', name: 'Bundle (All x3)', price: `${prices.powerUps.bundle} ${currency}`, color: '#f59e0b' }
+      { type: 'rocket', icon: '🚀', name: 'Rocket x5', price: `${prices.powerUps.rocket} ${currency}`, color: '#ef4444' },
+      { type: 'shield', icon: '🛡️', name: 'Shield x5', price: `${prices.powerUps.shield} ${currency}`, color: '#3b82f6' },
+      { type: 'magnet', icon: '🧲', name: 'Magnet x5', price: `${prices.powerUps.magnet} ${currency}`, color: '#8b5cf6' },
+      { type: 'slowTime', icon: '⏱️', name: 'Slow Time x5', price: `${prices.powerUps.slowTime} ${currency}`, color: '#10b981' },
+      { type: 'bundle', icon: '🎁', name: 'Bundle (All x5)', price: `${prices.powerUps.bundle} ${currency}`, color: '#f59e0b' }
     ];
   }
 }
