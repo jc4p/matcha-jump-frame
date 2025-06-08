@@ -84,7 +84,6 @@ export class Game extends GameEngine {
     this.leaderboardError = null;
     this.showLeaderboardInGameOver = false;
     this.playerGlobalRank = null;
-    this.profileImageCache = new Map();
     
     this.init();
   }
@@ -1047,50 +1046,11 @@ export class Game extends GameEngine {
           ctx.fillText(entry.rank.toString(), 50, y);
         }
         
-        // Profile picture
-        if (entry.pfpUrl) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(90, y - 8, 12, 0, Math.PI * 2);
-          ctx.clip();
-          
-          // Check if image is cached
-          if (this.profileImageCache.has(entry.pfpUrl)) {
-            const cachedImg = this.profileImageCache.get(entry.pfpUrl);
-            if (cachedImg.complete) {
-              ctx.drawImage(cachedImg, 78, y - 20, 24, 24);
-            } else {
-              // Still loading, show placeholder
-              ctx.fillStyle = '#e5e7eb';
-              ctx.fillRect(78, y - 20, 24, 24);
-            }
-          } else {
-            // Draw placeholder while image loads
-            ctx.fillStyle = '#e5e7eb';
-            ctx.fillRect(78, y - 20, 24, 24);
-            
-            // Load and cache the image
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            this.profileImageCache.set(entry.pfpUrl, img);
-            
-            img.onload = () => {
-              // Trigger a re-render when image loads
-              if (this.gameState === 'menu' && this.menuState === 'leaderboard') {
-                this.render();
-              }
-            };
-            img.src = entry.pfpUrl;
-          }
-          
-          ctx.restore();
-        }
-        
-        // Username or display name
+        // Username or display name with @ prefix
         ctx.font = isCurrentUser ? 'bold 16px Rubik, Arial' : '16px Rubik, Arial';
         ctx.fillStyle = isCurrentUser ? '#f59e0b' : '#333';
         const displayText = entry.displayName || entry.username || `FID ${entry.fid}`;
-        ctx.fillText(`${displayText}${isCurrentUser ? ' (You)' : ''}`, entry.pfpUrl ? 120 : 110, y);
+        ctx.fillText(`@${displayText}${isCurrentUser ? ' (You)' : ''}`, 110, y);
         
         // Score
         ctx.textAlign = 'right';
