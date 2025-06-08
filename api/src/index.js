@@ -459,13 +459,46 @@ app.get('/api/leaderboard', async (c) => {
       LIMIT ? OFFSET ?
     `).bind(limit, offset).all();
 
-    // Add rank to each entry
+    // Collect all FIDs to fetch user info
+    const fids = leaderboard.results.map(entry => entry.fid).join(',');
+    
+    // Fetch user information from Neynar
+    let userMap = {};
+    if (fids) {
+      try {
+        const neynarResponse = await fetch(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fids}`, {
+          headers: {
+            'x-api-key': c.env.NEYNAR_API_KEY
+          }
+        });
+        
+        if (neynarResponse.ok) {
+          const neynarData = await neynarResponse.json();
+          // Create a map of FID to user info
+          neynarData.users.forEach(user => {
+            userMap[user.fid] = {
+              username: user.username,
+              displayName: user.display_name,
+              pfpUrl: user.pfp_url
+            };
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch Neynar data:', error);
+        // Continue without user info if Neynar fails
+      }
+    }
+
+    // Add rank and user info to each entry
     const rankedLeaderboard = leaderboard.results.map((entry, index) => ({
       rank: offset + index + 1,
       fid: entry.fid,
       score: entry.score,
       totalGames: entry.total_games,
-      lastPlayed: entry.updated_at
+      lastPlayed: entry.updated_at,
+      username: userMap[entry.fid]?.username || null,
+      displayName: userMap[entry.fid]?.displayName || null,
+      pfpUrl: userMap[entry.fid]?.pfpUrl || null
     }));
 
     // Get authenticated user's rank if available

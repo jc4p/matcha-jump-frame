@@ -84,6 +84,7 @@ export class Game extends GameEngine {
     this.leaderboardError = null;
     this.showLeaderboardInGameOver = false;
     this.playerGlobalRank = null;
+    this.profileImageCache = new Map();
     
     this.init();
   }
@@ -478,7 +479,7 @@ export class Game extends GameEngine {
     this.drawMenuPlayer(ctx);
     
     // Trophy button in top right
-    this.drawButton(ctx, this.width - 50, 50, 60, 60, '🏆', 'rgba(0, 0, 0, 0)');
+    this.drawButton(ctx, this.width - 50, 50, 60, 60, '🏆', '#d1d5db');
     
     // Play button - moved up
     this.drawButton(ctx, this.width / 2, 210, 240, 70, 'PLAY', '#4a7c59');
@@ -933,10 +934,17 @@ export class Game extends GameEngine {
     
     // Button text
     ctx.fillStyle = '#fff';
-    ctx.font = '700 20px Rubik, Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text, x, y);
+    
+    // Special handling for emoji text (single character that's likely an emoji)
+    if (text.length <= 2 && /[\u{1F300}-\u{1F9FF}]/u.test(text)) {
+      ctx.font = '700 28px Rubik, Arial';
+      ctx.fillText(text, x, y + 2); // Slight offset for better visual centering
+    } else {
+      ctx.font = '700 20px Rubik, Arial';
+      ctx.fillText(text, x, y);
+    }
     
     ctx.textBaseline = 'alphabetic';
   }
@@ -1039,10 +1047,50 @@ export class Game extends GameEngine {
           ctx.fillText(entry.rank.toString(), 50, y);
         }
         
-        // Player FID (username would be better but not available)
+        // Profile picture
+        if (entry.pfpUrl) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(90, y - 8, 12, 0, Math.PI * 2);
+          ctx.clip();
+          
+          // Check if image is cached
+          if (this.profileImageCache.has(entry.pfpUrl)) {
+            const cachedImg = this.profileImageCache.get(entry.pfpUrl);
+            if (cachedImg.complete) {
+              ctx.drawImage(cachedImg, 78, y - 20, 24, 24);
+            } else {
+              // Still loading, show placeholder
+              ctx.fillStyle = '#e5e7eb';
+              ctx.fillRect(78, y - 20, 24, 24);
+            }
+          } else {
+            // Draw placeholder while image loads
+            ctx.fillStyle = '#e5e7eb';
+            ctx.fillRect(78, y - 20, 24, 24);
+            
+            // Load and cache the image
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            this.profileImageCache.set(entry.pfpUrl, img);
+            
+            img.onload = () => {
+              // Trigger a re-render when image loads
+              if (this.gameState === 'menu' && this.menuState === 'leaderboard') {
+                this.render();
+              }
+            };
+            img.src = entry.pfpUrl;
+          }
+          
+          ctx.restore();
+        }
+        
+        // Username or display name
         ctx.font = isCurrentUser ? 'bold 16px Rubik, Arial' : '16px Rubik, Arial';
         ctx.fillStyle = isCurrentUser ? '#f59e0b' : '#333';
-        ctx.fillText(`FID ${entry.fid}${isCurrentUser ? ' (You)' : ''}`, 110, y);
+        const displayText = entry.displayName || entry.username || `FID ${entry.fid}`;
+        ctx.fillText(`${displayText}${isCurrentUser ? ' (You)' : ''}`, entry.pfpUrl ? 120 : 110, y);
         
         // Score
         ctx.textAlign = 'right';
@@ -1343,10 +1391,6 @@ export class Game extends GameEngine {
       
       // Return to menu button
       this.drawButton(ctx, this.width / 2, showPowerUpShop ? 430 : 360, 200, 50, 'PLAY AGAIN', '#4a7c59');
-      
-      // Leaderboard button
-      const leaderboardY = showPowerUpShop ? 500 : 430;
-      this.drawButton(ctx, this.width / 2, leaderboardY, 200, 50, '🏆 LEADERBOARD', '#f59e0b');
       
       // Info
       ctx.fillStyle = '#666';
@@ -2116,16 +2160,6 @@ export class Game extends GameEngine {
       const menuY = showPowerUpShop ? 430 : 360;
       if (this.isPointInButton(x, y, this.width / 2, menuY, 200, 50)) {
         this.showMenu();
-        eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
-        return;
-      }
-      
-      // Leaderboard button
-      const leaderboardY = showPowerUpShop ? 500 : 430;
-      if (this.isPointInButton(x, y, this.width / 2, leaderboardY, 200, 50)) {
-        this.showLeaderboardInGameOver = true;
-        this.gameState = 'menu';
-        this.menuState = 'leaderboard';
         eventBus.emit(Events.HAPTIC_TRIGGER, 'selection');
         return;
       }
