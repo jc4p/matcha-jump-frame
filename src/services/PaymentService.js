@@ -21,8 +21,8 @@ export class PaymentService {
 
   // Get auth token using Quick Auth
   async getAuthToken() {
-    // For clientFid 399519, we don't need a JWT token
-    if (this.clientFid === 399519) {
+    // For clientFid 309857, we don't need a JWT token
+    if (this.clientFid === 309857) {
       return 'direct-fid-auth';
     }
 
@@ -56,7 +56,7 @@ export class PaymentService {
       'Content-Type': 'application/json'
     };
 
-    if (this.clientFid === 399519 && this.userFid) {
+    if (this.clientFid === 309857 && this.userFid) {
       // Use direct FID authentication
       headers['X-User-FID'] = this.userFid.toString();
     } else {
@@ -80,7 +80,7 @@ export class PaymentService {
   async ensureCorrectNetwork() {
     try {
       // Determine target chain based on clientFid
-      const targetChainId = this.clientFid === 399519 ? 8453 : 999; // Base for 399519, Hyper for others
+      const targetChainId = this.clientFid === 309857 ? 8453 : 999; // Base for 309857, Hyper for others
       const targetChainHex = targetChainId === 8453 ? '0x2105' : '0x3e7';
       const chainName = targetChainId === 8453 ? 'Base' : 'Hyper';
       
@@ -106,7 +106,7 @@ export class PaymentService {
       }
     } catch (error) {
       console.error('Failed to switch network:', error);
-      const targetChain = this.clientFid === 399519 ? 'Base (chain ID 8453)' : 'Hyper (chain ID 999)';
+      const targetChain = this.clientFid === 309857 ? 'Base (chain ID 8453)' : 'Hyper (chain ID 999)';
       throw new Error(`Failed to switch to the required network: ${targetChain}`);
     }
   }
@@ -114,8 +114,8 @@ export class PaymentService {
   // Make a payment through Frame SDK
   async makePayment(amount, description) {
     try {
-      // Skip if payments are disabled (but not for clientFid 399519)
-      if (this.paymentsDisabled && this.clientFid !== 399519) {
+      // Skip if payments are disabled (but not for clientFid 309857)
+      if (this.paymentsDisabled && this.clientFid !== 309857) {
         console.log('Payment skipped - disabled for this client');
         // Return a mock transaction hash
         return '0x' + Math.random().toString(16).substr(2, 64);
@@ -210,8 +210,8 @@ export class PaymentService {
 
   // Pay to continue playing
   async payContinue(currentScore, currentHeight) {
-    // If payments disabled (but not for clientFid 399519), return success without payment
-    if (this.paymentsDisabled && this.clientFid !== 399519) {
+    // If payments disabled (but not for clientFid 309857), return success without payment
+    if (this.paymentsDisabled && this.clientFid !== 309857) {
       console.log('Continue payment skipped - disabled for this client');
       return {
         success: true,
@@ -226,13 +226,13 @@ export class PaymentService {
     
     const prices = this.getPrices();
     const amount = prices.continue;
-    const currency = this.clientFid === 399519 ? 'ETH' : 'HYPE';
+    const currency = this.clientFid === 309857 ? 'ETH' : 'HYPE';
     const txHash = await this.makePayment(amount, `Continue playing Matcha Jump (${amount} ${currency})`);
     
     const verification = await this.verifyPayment(txHash, 'continue', {
       score: currentScore,
       height: currentHeight,
-      chain: this.clientFid === 399519 ? 'base' : 'hyper'
+      chain: this.clientFid === 309857 ? 'base' : 'hyper'
     });
     
     return verification;
@@ -240,8 +240,8 @@ export class PaymentService {
 
   // Purchase power-ups
   async purchasePowerUps(powerUpType, quantity = 1) {
-    // If payments disabled (but not for clientFid 399519), return success without payment
-    if (this.paymentsDisabled && this.clientFid !== 399519) {
+    // If payments disabled (but not for clientFid 309857), return success without payment
+    if (this.paymentsDisabled && this.clientFid !== 309857) {
       console.log('Power-up purchase skipped - disabled for this client');
       return {
         success: true,
@@ -256,7 +256,7 @@ export class PaymentService {
     
     const prices = this.getPrices();
     const amount = prices.powerUps[powerUpType] * quantity;
-    const currency = this.clientFid === 399519 ? 'ETH' : 'HYPE';
+    const currency = this.clientFid === 309857 ? 'ETH' : 'HYPE';
     const txHash = await this.makePayment(
       amount, 
       `Purchase ${quantity}x ${powerUpType} power-up (${amount} ${currency})`
@@ -265,7 +265,7 @@ export class PaymentService {
     const verification = await this.verifyPayment(txHash, 'powerup', {
       type: powerUpType,
       quantity,
-      chain: this.clientFid === 399519 ? 'base' : 'hyper'
+      chain: this.clientFid === 309857 ? 'base' : 'hyper'
     });
     
     return verification;
@@ -273,8 +273,8 @@ export class PaymentService {
 
   // Get power-up prices
   getPrices() {
-    // Different pricing for clientFid 399519 (Base chain)
-    if (this.clientFid === 399519) {
+    // Different pricing for clientFid 309857 (Base chain)
+    if (this.clientFid === 309857) {
       return {
         continue: 0.0005,
         powerUps: {
@@ -307,9 +307,9 @@ export class PaymentService {
       this.clientFid = context.client?.clientFid;
       this.userFid = context.user?.fid;
       
-      if (this.clientFid === 399519) {
+      if (this.clientFid === 309857) {
         // Don't disable payments anymore - we'll use direct FID auth
-        console.log('Client 399519 detected - will use direct FID authentication');
+        console.log('Client 309857 detected - will use direct FID authentication');
         console.log('User FID:', this.userFid);
       }
     } catch (e) {

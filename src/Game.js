@@ -1809,7 +1809,7 @@ export class Game extends GameEngine {
       
       // Get dynamic pricing
       const prices = paymentService.getPrices();
-      const currency = paymentService.clientFid === 399519 ? 'ETH' : 'HYPE';
+      const currency = paymentService.clientFid === 309857 ? 'ETH' : 'HYPE';
       
       ctx.fillStyle = '#333';
       ctx.font = '700 28px Rubik, Arial';

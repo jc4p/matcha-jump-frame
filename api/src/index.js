@@ -20,7 +20,7 @@ app.use('*', cors({
 
 // JWT authentication middleware
 async function authMiddleware(c, next) {
-  // Check for X-User-FID header first (for clientFid 399519)
+  // Check for X-User-FID header first (for clientFid 309857)
   const userFidHeader = c.req.header('X-User-FID');
   if (userFidHeader) {
     // Validate that this is a legitimate direct FID auth request

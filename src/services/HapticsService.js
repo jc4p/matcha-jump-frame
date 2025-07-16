@@ -19,9 +19,9 @@ export class HapticsService {
     try {
       const context = await frame.sdk.context;
       const clientFid = context.client?.clientFid;
-      if (clientFid === 399519) {
+      if (clientFid === 309857) {
         this.hapticsDisabled = true;
-        console.log('Haptics disabled for clientFid 399519');
+        console.log('Haptics disabled for clientFid 309857');
         return
       }
     } catch (e) {
