@@ -126,7 +126,7 @@ export class Game extends GameEngine {
   startLoadingAnimation() {
     const animate = () => {
       if (this.gameState === 'loading') {
-        this.renderLoading();
+        this.render();
         requestAnimationFrame(animate);
       }
     };
@@ -2315,7 +2315,7 @@ export class Game extends GameEngine {
   // Helper method to get power-up info with dynamic pricing
   getPowerUpShopInfo() {
     const prices = paymentService.getPrices();
-    const currency = paymentService.clientFid === 399519 ? 'ETH' : 'HYPE';
+    const currency = paymentService.clientFid === 309857 ? 'ETH' : 'HYPE';
     
     return [
       { type: 'rocket', icon: '🚀', name: 'Rocket x5', price: `${prices.powerUps.rocket} ${currency}`, color: '#ef4444' },
